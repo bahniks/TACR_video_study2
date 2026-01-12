@@ -261,13 +261,16 @@ class Videos2(ExperimentFrame):
         self.root = root
         self.video_path = self.getVideo()
 
+        self.distraction = "video"
+
         # Create video canvas on the left
         self.canvas1 = Canvas(self, width=600, height=337, background="white", highlightbackground="white", highlightcolor="white")
         self.canvas1.grid(column=1, row=1, sticky=(N, S, E, W), padx=5)
 
         # Create game canvas on the right
-        self.canvas2 = Canvas(self, width=600, height=337, background="black", highlightbackground="black", highlightcolor="black")
-        self.canvas2.grid(column=2, row=1, sticky=(N, S, E, W), padx=5)
+        if self.distraction != "none":
+            self.canvas2 = Canvas(self, width=600, height=337, background="black", highlightbackground="black", highlightcolor="black")
+            self.canvas2.grid(column=2, row=1, sticky=(N, S, E, W), padx=5)
 
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
@@ -276,8 +279,8 @@ class Videos2(ExperimentFrame):
         self.rowconfigure(0, weight=1)
         self.rowconfigure(2, weight=1)
 
-        # Initialize VLC player for left video
-        self.instance = vlc.Instance()
+        # Initialize VLC player for left video with audio output
+        self.instance = vlc.Instance('--aout=waveout')
         self.player = self.instance.media_player_new()
         self.player.set_hwnd(self.canvas1.winfo_id())
 
@@ -295,8 +298,22 @@ class Videos2(ExperimentFrame):
         # Play the video
         self.player.play()
 
-        # Initialize Arkanoid game on the right
-        self.game = ArkanoidGame(self.canvas2, width=600, height=337)
+        # Initialize distraction on the right
+        if self.distraction == "arkanoid":            
+            self.game = ArkanoidGame(self.canvas2, width=600, height=337)
+        elif self.distraction == "video":
+            self.distraction_videos = self.getDistractionVideos()
+            self.current_distraction_index = 0
+            self.instance2 = vlc.Instance()
+            self.player2 = self.instance2.media_player_new()
+            self.player2.set_hwnd(self.canvas2.winfo_id())
+            
+            # Set up event manager for distraction video player
+            self.event_manager2 = self.player2.event_manager()
+            self.event_manager2.event_attach(vlc.EventType.MediaPlayerEndReached, self.on_distraction_video_end)
+            
+            # Play first distraction video
+            self.play_next_distraction_video()
 
         ttk.Style().configure("TButton", font="helvetica 15")
         self.next = ttk.Button(self, text="Pokračovat", command=self.stop)
@@ -305,13 +322,36 @@ class Videos2(ExperimentFrame):
             self.next["state"] = "disabled"
 
     def on_video_end(self, event):
-        """Callback for when video ends."""
+        """Callback for when main video ends."""
         self.video_ended = True
         self.next["state"] = "normal"
 
+    def on_distraction_video_end(self, event):
+        """Callback for when distraction video ends - play the next one."""
+        if not self.video_ended:
+            # Main video is still playing, play next distraction video
+            self.play_next_distraction_video()
+
+    def play_next_distraction_video(self):
+        """Load and play the next distraction video from the shuffled list."""
+        if len(self.distraction_videos) > 0:
+            # Stop current playback
+            self.player2.stop()
+            
+            # Loop through videos, wrapping around if needed
+            video_path = self.distraction_videos[self.current_distraction_index % len(self.distraction_videos)]
+            media2 = self.instance2.media_new(video_path)
+            self.player2.set_media(media2)
+            self.player2.audio_set_mute(True)
+            self.player2.play()
+            self.current_distraction_index += 1
+
     def stop(self):
         self.player.stop()
-        self.game.stop()
+        if self.distraction == "arkanoid":
+            self.game.stop()
+        elif self.distraction == "video":
+            self.player2.stop()
         self.root.status["videoNumber"] += 1
         self.nextFun()
 
@@ -320,6 +360,23 @@ class Videos2(ExperimentFrame):
         version = self.root.status["versions"][trial - 1]
         file = [f for f in os.listdir(os.path.join(os.getcwd(), "Stuff", "Videos")) if f.startswith(f"{trial}{version}")]
         return os.path.join(os.getcwd(), "Stuff", "Videos", file[0])
+
+    def getDistractionVideos(self):
+        """Get list of distraction videos from Stuff/Distractions folder, shuffled."""
+        distractions_path = os.path.join(os.getcwd(), "Stuff", "Distractions")
+        if not os.path.exists(distractions_path):
+            return []
+        
+        # Get all video files
+        video_extensions = ['.mp4', '.mkv', '.avi', '.mov', '.flv', '.wmv']
+        videos = [f for f in os.listdir(distractions_path) 
+                  if os.path.isfile(os.path.join(distractions_path, f)) 
+                  and os.path.splitext(f)[1].lower() in video_extensions]
+        
+        # Create full paths and shuffle
+        full_paths = [os.path.join(distractions_path, v) for v in videos]
+        random.shuffle(full_paths)
+        return full_paths
 
 
 class JOL(InstructionsFrame):
