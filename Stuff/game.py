@@ -364,13 +364,32 @@ class Game:
                 countdown_text = str(self.restart_seconds_remaining)
 
             if countdown_text:
-                self.canvas.create_text(
-                    self.offset_x + self.board_width // 2,
-                    self.offset_y + self.board_height // 2 + 34,
-                    text=f"Restart in: {countdown_text}",
-                    font=("Helvetica", 14, "bold"),
-                    fill="#ffffff"
+                center_x = self.offset_x + self.board_width // 2
+                center_y = self.offset_y + self.board_height // 2 + 42
+                if countdown_text == "START":
+                    countdown_label = "Restarting..."
+                else:
+                    countdown_label = f"Restart in: {countdown_text}"
+
+                text_id = self.canvas.create_text(
+                    center_x,
+                    center_y,
+                    text=countdown_label,
+                    font=("Helvetica", 20, "bold"),
+                    fill="#ff4d4d"
                 )
+                x1, y1, x2, y2 = self.canvas.bbox(text_id)
+                padding_x = 14
+                padding_y = 8
+                bg_id = self.canvas.create_rectangle(
+                    x1 - padding_x,
+                    y1 - padding_y,
+                    x2 + padding_x,
+                    y2 + padding_y,
+                    fill="#000000",
+                    outline=""
+                )
+                self.canvas.tag_raise(text_id, bg_id)
 
     def _recalculate_layout(self):
         horizontal_padding = max(8, int(self.width * 0.04))

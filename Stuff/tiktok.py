@@ -22,9 +22,10 @@ class TikTok:
         self.distraction_videos = self.get_distraction_videos()
         self.current_distraction_index = 0
         self.player2 = None
+        self.running = True
 
         if self.distraction_videos:
-            self.instance2 = vlc.Instance()
+            self.instance2 = vlc.Instance('--vout=direct3d9')
             self.player2 = self.instance2.media_player_new()
             self.player2.set_hwnd(self.canvas.winfo_id())
 
@@ -42,10 +43,12 @@ class TikTok:
             )
 
     def on_distraction_video_end(self, event):
-        self.play_next_distraction_video()
+        if not self.running:
+            return
+        self.canvas.after(0, self.play_next_distraction_video)
 
     def play_next_distraction_video(self):
-        if not self.distraction_videos or self.player2 is None:
+        if not self.running or not self.distraction_videos or self.player2 is None:
             return
 
         self.player2.stop()
@@ -58,6 +61,7 @@ class TikTok:
         self.current_distraction_index += 1
 
     def stop(self):
+        self.running = False
         if self.player2 is not None:
             self.player2.stop()
 

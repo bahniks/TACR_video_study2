@@ -63,7 +63,7 @@ class Videos(ExperimentFrame):
         self.rowconfigure(2, weight = 1)
 
         # Initialize VLC player
-        self.instance = vlc.Instance()
+        self.instance = vlc.Instance('--vout=direct3d9')
         self.player = self.instance.media_player_new()
 
         # Set the video output to the tkinter canvas
@@ -108,6 +108,9 @@ class Videos2(ExperimentFrame):
         super().__init__(root)
         self.root = root
         self.video_path = self.getVideo()
+        self.overlay_enabled = BooleanVar(value=False)
+        self.overlay_refresh_job = None
+        self.right_overlay_window = None
 
         # Create video canvas on the left
         self.canvas1 = Canvas(self, width=600, height=337, background="white", highlightbackground="white", highlightcolor="white")
@@ -116,6 +119,7 @@ class Videos2(ExperimentFrame):
         # Create right-side content canvas
         self.canvas2 = Canvas(self, width=600, height=337, background="black", highlightbackground="black", highlightcolor="black")
         self.canvas2.grid(column=2, row=1, sticky=(N, S, E, W), padx=5)
+        self.canvas2.bind("<Configure>", self._on_right_canvas_configure)
 
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
@@ -125,7 +129,7 @@ class Videos2(ExperimentFrame):
         self.rowconfigure(2, weight=1)
 
         # Initialize VLC player for left video with audio output
-        self.instance = vlc.Instance('--aout=waveout')
+        self.instance = vlc.Instance('--aout=waveout', '--vout=direct3d9')
         self.player = self.instance.media_player_new()
         self.player.set_hwnd(self.canvas1.winfo_id())
 
@@ -144,7 +148,7 @@ class Videos2(ExperimentFrame):
         self.player.play()
 
         self.content_type = random.choice(["chat", "tiktok", "game"])
-        self.content_type = "game"  # For testing purposes, you can set this to a specific content type
+        #self.content_type = "chat"  # For testing purposes, you can set this to a specific content type
         content_map = {
             "chat": Chat,
             "tiktok": TikTok,
@@ -155,7 +159,15 @@ class Videos2(ExperimentFrame):
 
         ttk.Style().configure("TButton", font="helvetica 15")
         self.next = ttk.Button(self, text="Pokračovat", command=self.stop)
-        self.next.grid(row=2, column=1, columnspan=2)
+        self.next.grid(row=2, column=1)
+
+        self.overlay_toggle = ttk.Checkbutton(
+            self,
+            text="Šedý filtr vpravo",
+            variable=self.overlay_enabled,
+            command=self.toggle_right_overlay
+        )
+        self.overlay_toggle.grid(row=2, column=2, sticky="e", padx=5)
         if not TESTING:
             self.next["state"] = "disabled"
 
@@ -165,10 +177,64 @@ class Videos2(ExperimentFrame):
         self.next["state"] = "normal"
 
     def stop(self):
+        if self.overlay_refresh_job is not None:
+            self.after_cancel(self.overlay_refresh_job)
+            self.overlay_refresh_job = None
+        self._destroy_right_overlay_window()
         self.player.stop()
         self.right_content.stop()
         self.root.status["videoNumber"] += 1
         self.nextFun()
+
+    def _on_right_canvas_configure(self, event):
+        if self.overlay_enabled.get():
+            self._position_right_overlay_window()
+
+    def _ensure_right_overlay_window(self):
+        if self.right_overlay_window is not None and self.right_overlay_window.winfo_exists():
+            return
+
+        self.right_overlay_window = Toplevel(self)
+        self.right_overlay_window.overrideredirect(True)
+        self.right_overlay_window.configure(background="#808080")
+        self.right_overlay_window.attributes("-alpha", 0.45)
+        self.right_overlay_window.transient(self.winfo_toplevel())
+
+    def _refresh_right_overlay(self):
+        self.overlay_refresh_job = None
+        if not self.overlay_enabled.get():
+            return
+
+        self._position_right_overlay_window()
+        self.overlay_refresh_job = self.after(120, self._refresh_right_overlay)
+
+    def _position_right_overlay_window(self):
+        self._ensure_right_overlay_window()
+        self.update_idletasks()
+
+        x = self.canvas2.winfo_rootx()
+        y = self.canvas2.winfo_rooty()
+        width = max(1, self.canvas2.winfo_width())
+        height = max(1, self.canvas2.winfo_height())
+
+        self.right_overlay_window.geometry(f"{width}x{height}+{x}+{y}")
+        self.right_overlay_window.lift()
+
+    def _destroy_right_overlay_window(self):
+        if self.right_overlay_window is not None and self.right_overlay_window.winfo_exists():
+            self.right_overlay_window.destroy()
+        self.right_overlay_window = None
+
+    def toggle_right_overlay(self):
+        if self.overlay_enabled.get():
+            self._position_right_overlay_window()
+            if self.overlay_refresh_job is None:
+                self.overlay_refresh_job = self.after(120, self._refresh_right_overlay)
+        else:
+            self._destroy_right_overlay_window()
+            if self.overlay_refresh_job is not None:
+                self.after_cancel(self.overlay_refresh_job)
+                self.overlay_refresh_job = None
 
     def getVideo(self):
         trial = self.root.status["videoNumber"]

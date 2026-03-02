@@ -152,7 +152,7 @@ class Chat:
 
     def add_message_bubble(self, side, nickname, text):
         row = Frame(self.messages_frame, background="white")
-        row.pack(fill="x", pady=4, padx=8)
+        row.pack(fill="x", pady=4, padx=4)
 
         bubble_container = Frame(row, background="white")
         if side == "left":
@@ -178,7 +178,7 @@ class Chat:
             text=text,
             justify="left",
             anchor="w",
-            wraplength=int(self.width * 0.42),
+            wraplength=int(self.width * 0.62),
             background="#f2f2f2",
             foreground="black",
             padx=10,
@@ -197,14 +197,14 @@ class Chat:
         self.clear_typing_indicator()
 
         row = Frame(self.messages_frame, background="white")
-        row.pack(fill="x", pady=(2, 4), padx=8)
+        row.pack(fill="x", pady=(2, 4), padx=4)
 
         typing_label = Label(
             row,
             text=f"{nickname} is typing...",
             justify="left",
             anchor="w",
-            wraplength=int(self.width * 0.42),
+            wraplength=int(self.width * 0.62),
             background="#fff3cd",
             foreground="#7a5200",
             padx=10,
