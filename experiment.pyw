@@ -13,7 +13,7 @@ from demo import Demographics
 from comments import Comments
 from login import Login
 from videointros import VideoIntro1, VideoIntro2, Sound, VideoIntro4, VideoIntro5, Selection, VideoIntro6
-from videos import Videos, JOL, IMI1, Quiz1, Quiz2, IMI2, Quiz3, IMI3
+from videos import Videos, JOL, IMI1, Quiz1, Quiz2, IMI2, Quiz3, IMI3, Videos2
 from quest import QuestInstructions, Hexaco
 from questionnaire import NFC, Boredom, Social
 
@@ -46,7 +46,7 @@ frames = [Initial,
           Ending
          ]
 
-#frames = [Login, Selection, Quiz3, Hexaco, Ending]
+frames = [Login, Videos2]
 
 if __name__ == "__main__":
     GUI(frames, load = os.path.exists("temp.json"))
