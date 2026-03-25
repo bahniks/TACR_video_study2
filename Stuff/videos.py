@@ -29,6 +29,16 @@ U každého z následujících tvrzení uveďte, nakolik je pro vás pravdivé.
 
 imiScale = ["zcela nepravdivé", "spíše nepravdivé", "do jisté míry pravdivé", "spíše pravdivé", "zcela pravdivé"]
 
+
+attInstructions = """Zhodnoťte svou pozornost během právě zhlédnutého videa. 
+U každé otázky vyberte na uvedené škále možnost, která nejlépe odpovídá Vaší zkušenosti."""
+
+attQ1 = "Jak moc jste se soustředili na výukové video během jeho přehrávání?"
+attQ2 = "Do jaké míry vaše pozornost odbíhala od videa?"
+
+attScale = ["vůbec ne", "trochu", "středně", "hodně", "velmi hodně"]
+
+
 quizInstructions1 = """
 Nyní odpovězte na následující otázky týkající se obsahu právě zhlédnutého videa na Prokletí znalosti. U každé otázky jsou uvedeny čtyři odpovědi, vždy jen jedna z nich je správná. (Výsledek tohoto kvízu nemá vliv na výši odměny.)
 """
@@ -97,9 +107,7 @@ class Videos(ExperimentFrame):
 
     def getVideo(self):
         trial = self.root.status["videoNumber"]
-        version = self.root.status["versions"][trial - 1]
-        file = [f for f in os.listdir(os.path.join(os.getcwd(), "Stuff", "Videos")) if f.startswith(f"{trial}{version}")]
-        return os.path.join(os.getcwd(), "Stuff", "Videos", file[0])
+        return os.path.join(os.getcwd(), "Stuff", "Videos", f"0{trial}.mp4")
 
 
 
@@ -238,9 +246,7 @@ class Videos2(ExperimentFrame):
 
     def getVideo(self):
         trial = self.root.status["videoNumber"]
-        version = self.root.status["versions"][trial - 1]
-        file = [f for f in os.listdir(os.path.join(os.getcwd(), "Stuff", "Videos")) if f.startswith(f"{trial}{version}")]
-        return os.path.join(os.getcwd(), "Stuff", "Videos", file[0])
+        return os.path.join(os.getcwd(), "Stuff", "Videos", f"0{trial}.mp4")
 
 
 class JOL(InstructionsFrame):
@@ -265,6 +271,39 @@ class JOL(InstructionsFrame):
         version = self.root.status["versions"][trial - 1]
         self.file.write("JOL\n")
         self.file.write(self.id + "\t" + str(trial) + "\t" + version + "\t" + self.measure.answer.get() + "\n\n")
+
+
+class Attention(InstructionsFrame):
+    def __init__(self, root):
+        super().__init__(root, text = attInstructions, proceed = True, savedata = True)
+
+        self.root = root
+
+        self.measure1 = Measure(self, text = attQ1, values = attScale, left = "", right = "", questionPosition = "above", filler = 700, function = self.enable)
+        self.measure1.grid(row = 2, column = 1)
+
+        self.measure2 = Measure(self, text = attQ2, values = attScale, left = "", right = "", questionPosition = "above", filler = 700, function = self.enable)
+        self.measure2.grid(row = 3, column = 1)
+
+        self.next.grid(row = 4, column = 1)
+
+        self.rowconfigure(0, weight = 3)
+        self.rowconfigure(1, weight = 1)
+        self.rowconfigure(2, weight = 1)
+        self.rowconfigure(3, weight = 1)
+        self.rowconfigure(4, weight = 2)
+        self.rowconfigure(5, weight = 3)
+
+        self.next["state"] = "disabled"
+
+    def enable(self):
+        if self.measure1.answer.get() and self.measure2.answer.get():
+            self.next["state"] = "normal"
+
+    def write(self):
+        trial = self.root.status["videoNumber"] - 1
+        self.file.write("Attention\n")
+        self.file.write(self.id + "\t" + str(trial) + "\t" + self.measure1.answer.get() + "\t" + self.measure2.answer.get() + "\n\n")
 
 
 class Quiz(InstructionsAndUnderstanding):
@@ -373,5 +412,4 @@ Quiz3 = (Quiz, {"text": quizInstructions3, "height": 8, "name": "Quiz3", "contro
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.getcwd()))
-    GUI([Login, Videos2, Videos, IMI2,
-         JOL, IMI1, Quiz1])
+    GUI([Login, Attention, Videos2, Videos])

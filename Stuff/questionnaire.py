@@ -15,14 +15,7 @@ from constants import TESTING, AUTOFILL
 
 intro = "Označte, do jaké míry souhlasíte s následujícímí tvrzeními, na poskytnuté škále."
 
-nfcIntro = "Přečtěte si prosíme každé tvrzení a ohodnoťte, nakolik je pro Vás ne/charakteristické."
-
-boredomIntro = """Přečtěte si prosíme každé tvrzení a označte, nakolik s ním souhlasíte.
-Vaším úkolem je odpovídat co nejupřímněji podle toho, co nejlépe vystihuje Vaše běžné prožívání a chování."""
-
-socialIntro = """Níže naleznete několik otázek týkajících se Vašeho vztahu k sociálním médiím (Facebook, Twitter, Instagram, TikTok apod.) a jejich používání. 
-U každé otázky vyberte tu variantu odpovědi, která vás nejlépe vystihuje."""
-
+uppsIntro = """Přečtěte si prosím každé tvrzení a označte, nakolik s ním souhlasíte."""
 
 
 class Questionnaire(ExperimentFrame):
@@ -173,122 +166,27 @@ class Questionnaire(ExperimentFrame):
 
 
 
-NFC = (Questionnaire,
-                {"words": "nfc.txt",
-                 "question": nfcIntro,
-                 "labels": ["pro mě velmi necharakteristické",
-                            "pro mě necharakteristické",
-                            "neutrální",
-                            "pro mě charakteristické",
-                            "pro mě velmi charakteristické"],
-                 "values": 5,
-                 "labelwidth": 15,
-                 "text": False,
-                 "fontsize": 13,
-                 "blocksize": 6,
-                 "wraplength": 500,
-                 "filetext": "NFC",
-                 "fixedlines": 3,
-                 "pady": 3})
+
+UPPS = (Questionnaire,
+                {"words": "upps.txt",
+                    "question": uppsIntro,
+                    "labels": ["rozhodně nesouhlasím",
+                                "spíše nesouhlasím",
+                                "spíše souhlasím",
+                                "rozhodně souhlasím"],
+                    "values": 4,
+                    "labelwidth": 11,
+                    "text": False,
+                    "fontsize": 12,
+                    "blocksize": 8,
+                    "wraplength": 750,
+                    "filetext": "UPPS",
+                    "fixedlines": 2,
+                    "pady": 5})
 
 
-Boredom = (Questionnaire,
-                {"words": "boredom.txt",
-                 "question": boredomIntro,
-                 "labels": ["rozhodně nesouhlasím",
-                            "nesouhlasím",
-                            "spíše nesouhlasím",
-                            "neutrální",
-                            "spíše souhlasím",
-                            "souhlasím",
-                            "rozhodně souhlasím"],
-                 "values": 7,
-                 "labelwidth": 11,
-                 "text": False,
-                 "fontsize": 13,
-                 "blocksize": 8,
-                 "wraplength": 450,
-                 "filetext": "Boredom",
-                 "fixedlines": 2,
-                 "pady": 5})
-
-
-Social = (Questionnaire,
-                {"words": "social.txt",
-                 "question": socialIntro,
-                 "labels": ["velmi zřídka",
-                            "zřídka",
-                            "někdy",
-                            "často",
-                            "velmi často"],
-                 "values": 5,
-                 "labelwidth": 10,
-                 "text": False,
-                 "fontsize": 13,
-                 "blocksize": 6,
-                 "wraplength": 600,
-                 "filetext": "Social",
-                 "fixedlines": 2,
-                 "pady": 5})
-
-# TDMS = (Questionnaire,
-#                 {"words": "tdms.txt",
-#                  "question": intro,
-#                  "labels": ["Zcela\nnesouhlasím",
-#                             "Nesouhlasím",
-#                             "Mírně\nnesouhlasím",
-#                             "Neutrální",
-#                             "Mírně\nsouhlasím",
-#                             "Souhlasím",
-#                             "Zcela\nsouhlasím"],
-#                  "values": 7,
-#                  "labelwidth": 11,
-#                  "text": False,
-#                  "fontsize": 15,
-#                  "blocksize": 12,
-#                  "wraplength": 450,
-#                  "filetext": "TDMS",
-#                  "fixedlines": 2,
-#                  "pady": 3,
-#                  "labelFontsize": 13,
-#                  })
-
-# TEQ = (Questionnaire,
-#                 {"words": "teq.txt",
-#                  "question": TEQintro,
-#                  "labels": ["Nikdy",
-#                             "Zřídka",
-#                             "Někdy",
-#                             "Často",
-#                             "Vždy"],
-#                  "values": 5,
-#                  "labelwidth": 6,
-#                  "text": False,
-#                  "fontsize": 14,
-#                  "blocksize": 4,
-#                  "filetext": "TEQ"})
-
-# PoliticalWill = (Questionnaire,
-#                 {"words": "polwill.txt",
-#                  "question": polwillintro,
-#                  "labels": ["Zcela\nnesouhlasím",
-#                             "Nesouhlasím",
-#                             "Mírně\nnesouhlasím",
-#                             "Neutrální",
-#                             "Mírně\nsouhlasím",
-#                             "Souhlasím",
-#                             "Zcela\nsouhlasím"],
-#                  "values": 7,
-#                  "labelwidth": 11,
-#                  "text": False,
-#                  "fontsize": 13,
-#                  "blocksize": 9,
-#                  "wraplength": 450,
-#                  "filetext": "Political Will",
-#                  "fixedlines": 2,
-#                  "pady": 3})
 
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.getcwd()))
-    GUI([TDMS])
+    GUI([UPPS])

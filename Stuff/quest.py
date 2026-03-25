@@ -13,27 +13,18 @@ import random
 from common import ExperimentFrame, InstructionsFrame, read_all
 from gui import GUI
 
-from constants import BONUS, TESTING
+from constants import ATTENTION_BONUS, BONUS, TESTING
 
 
 ################################################################################
 # TEXTS
-questintro = f"""
-Váš výsledek z finálního kvízu a Vaši výši odměny se dozvíte na konci celé studie. 
-
-V následující části studie budete odpovídat na otázky o sobě, Vašich postojích a názorech. Tato část by měla trvat asi 15 minut.
+questintro = f"""V následující části studie budete odpovídat na otázky o sobě, Vašich postojích a názorech. Tato část by měla trvat asi 10 minut.
 
 Každou otázku si pečlivě přečtěte. Snažte se však na otázky nemyslet příliš dlouho; první odpověď, která Vám přijde na mysl, je obvykle nejlepší.
 
-Mezi dotazníky bude jedna položka měřící Vaší pozornost, pokud odpovíte správně, dostanete dodatečných {BONUS} Kč.
-"""
+Mezi dotazníky bude jedna položka měřící Vaší pozornost, pokud odpovíte správně, dostanete dodatečných {ATTENTION_BONUS} Kč."""
 
 attentiontext = "Chcete-li prokázat, že zadání věnujete pozornost, vyberte možnost "
-
-hexacoinstructions = """Na následujících stránkách najdete řadu prohlášení o Vaší osobě.
-
-Přečtěte si prosím každé prohlášení a rozhodněte se, do jaké míry s ním souhlasíte, nebo nesouhlasíte.
-"""
 
 bonusGained = f"Protože jste odpověděl(a) správně na všechny kontrolní otázky, získáváte dalších {BONUS} Kč."
 bonusNotGained = f"Protože jste neodpověděl(a) správně na všechny kontrolní otázky, nezískáváte dalších {BONUS} Kč."

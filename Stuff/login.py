@@ -59,14 +59,12 @@ class Login(InstructionsFrame):
         self.login()
 
     def update_intros(self):
-        versions = ["R", "S"]
-        random.shuffle(versions)
-        self.root.status["versions"] = versions
+        self.root.status["condition"] = random.choice(["nudge", "boost", "control"])
         self.root.status["videoNumber"] = 1
-        self.root.texts["version1"] = versions[0]
-        self.root.texts["version2"] = versions[1]            
-        self.root.status["condition"] = random.choice(["high", "low"])    
-        self.root.texts["condition"] = "1000" if self.root.status["condition"] == "high" else "10"
+        self.root.status["distrations1"] = ["chat", "game", "video", "control"]
+        self.root.status["distrations2"] = ["chat", "game", "video", "control"]
+        random.shuffle(self.root.status["distrations1"])
+        random.shuffle(self.root.status["distrations2"])                     
 
     def write(self, response):
         self.file.write("Login" + "\n")
