@@ -1,0 +1,8 @@
+Žádný problém	Lehké zpoždění	Větší zpoždění	Velké zpoždění nebo žádný spánek
+Žádný problém	Zanedbatelný problém	Vážnější problém	Závažný problém nebo žádný spánek
+Ne dříve	Lehce dříve	Docela dříve	O dost dříve
+Dostatečná	Lehce nedostatečná	Docela nedostatečná	Velmi nedostatečná nebo žádný spánek
+Uspokojivá	Lehce neuspokojivá	Docela neuspokojivá	Velmi neuspokojivá nebo žádný spánek
+Normální	Lehce pokleslý	Docela pokleslý	Velmi pokleslý
+Normální	Lehce pokleslé	Docela pokleslé	Velmi pokleslé
+Žádná	Lehká	Značná	Intenzivní

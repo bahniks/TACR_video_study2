@@ -46,7 +46,7 @@ class GUI(Tk):
 
         self.order = frames
 
-        self.texts = defaultdict(str)
+        self.texts = defaultdict(str)        
         self.status = defaultdict(str)
         self.status["logged"] = False
         self.status["reward"] = PARTICIPATION_FEE

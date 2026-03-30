@@ -4,7 +4,7 @@ QUIZ_BONUS = 5
 LIMIT = 24
 BONUS = 20
 
-AUTOFILL = False
+AUTOFILL = True
 TESTING = True
 GOTHROUGH = False
 URL = "https://bahnik.pythonanywhere.com/"

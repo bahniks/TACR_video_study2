@@ -200,11 +200,11 @@ class Likert(Canvas):
         self.root.check()
 
 
-class Hexaco(Quest):
-    def __init__(self, root):
-        super().__init__(root, 9, "hexaco.txt", "Hexaco", instructions = hexacoinstructions, width = 85,
-                         left = "silně nesouhlasím", right = "silně souhlasím",
-                         height = 3, options = 5, center = True, checks = 3)
+# class Hexaco(Quest):
+#     def __init__(self, root):
+#         super().__init__(root, 9, "hexaco.txt", "Hexaco", instructions = hexacoinstructions, width = 85,
+#                          left = "silně nesouhlasím", right = "silně souhlasím",
+#                          height = 3, options = 5, center = True, checks = 3)
         
         
 # polwillintro = "Označte, do jaké míry souhlasíte s následujícímí tvrzeními, na poskytnuté škále."

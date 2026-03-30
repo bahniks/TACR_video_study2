@@ -77,8 +77,8 @@ class Questionnaire(ExperimentFrame):
 
         for count, word in enumerate(self.words, 1):
             self.variables[word] = StringVar()
-            if AUTOFILL:
-                self.variables[word].set(random.randint(1, self.values))
+            #if AUTOFILL:
+            #    self.variables[word].set(random.randint(1, self.values))
             for i in range(1, self.values+1):
                 if word not in self.buttons:
                     self.buttons[word] = {}
@@ -156,12 +156,13 @@ class Questionnaire(ExperimentFrame):
             self.file.write(self.id + "\t" + word + "\t" + self.variables[word].get() + "\n")
 
     def gothrough(self):
-        for word in self.words:
-            choice = random.randint(1, self.values)
-            self.buttons[word][choice].invoke()
-        self.update()
-        sleep(0.5)
-        self.next.invoke()
+        for i in range(ceil(len(self.allwords)/self.perpage)):
+            for word in self.words:
+                choice = random.randint(1, self.values)
+                self.buttons[word][choice].invoke()
+            self.update()
+            sleep(0.5)
+            self.next.invoke()
 
 
 
@@ -174,12 +175,14 @@ UPPS = (Questionnaire,
                                 "spíše nesouhlasím",
                                 "spíše souhlasím",
                                 "rozhodně souhlasím"],
+                    "perpage": 10,
+                    "randomize": True,
                     "values": 4,
                     "labelwidth": 11,
                     "text": False,
-                    "fontsize": 12,
-                    "blocksize": 8,
-                    "wraplength": 750,
+                    "fontsize": 15,
+                    "blocksize": 10,
+                    "wraplength": 600,
                     "filetext": "UPPS",
                     "fixedlines": 2,
                     "pady": 5})

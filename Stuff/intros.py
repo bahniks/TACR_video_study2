@@ -35,8 +35,8 @@ Všechny informace, které v průběhu studie uvidíte, jsou pravdivé a nebudet
 ending = """Toto je konec experimentu.
 
 Za účast na studii dostáváte {} Kč. 
-{} jste správně na kontrolní otázku v dotazníku. {} tedy dodatečných {} Kč. 
-V závěrečném kvízu jste dosáhl(a) {} správných odpovědí z 25. Na základě výsledků v závěrečném kvízu získáváte tedy navíc {} Kč.
+{}
+V závěrečném kvízu jste dosáhl(a) {} správných odpovědí z 40. Na základě výsledků v závěrečném kvízu získáváte tedy navíc {} Kč.
 
 <b>Vaše odměna za tuto studii je dohromady {} Kč. Napište prosím tuto částku do příjmového dokladu na stole před Vámi.</b> 
 
@@ -68,15 +68,15 @@ Pokud jste již tak neučinili, přečtěte si informovaný souhlas a podepište
 ################################################################################
 
 
-
+# self.root.status["results"] += [charityNotChosenText] dat vsude, kde se popisuji vysledky
 
 
 class Ending(InstructionsFrame):
     def __init__(self, root):
-        root.texts["reward"] = PARTICIPATION_FEE + root.status["bonus"] + root.status["quizwin"]
+        root.texts["reward"] = str(root.status["reward"])
         root.texts["participation_fee"] = PARTICIPATION_FEE
         root.texts["bonus"] = BONUS
-        updates = ["participation_fee", "attention1", "attention2", "bonus", "quizcorrect", "quizwin", "reward"]
+        updates = ["participation_fee", "results", "quizcorrect", "quizwin", "reward"]
         super().__init__(root, text = ending, keys = ["g", "G"], proceed = False, height = "auto", update = updates)
         self.file.write("Ending\n")
         self.file.write(self.id + "\t" + str(root.texts["reward"]) + "\n\n")

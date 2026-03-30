@@ -10,7 +10,7 @@ import vlc
 
 from common import InstructionsFrame
 from gui import GUI
-from constants import LIMIT, TESTING
+from constants import LIMIT, TESTING, QUIZ_BONUS
 from login import Login
 
 
@@ -47,7 +47,14 @@ Stejně jako v předchozí části vás po každém videu poprosíme o krátké 
 Klikněte na tlačítko "Pokračovat" a video se spustí automaticky."""
 
 
-endvideos = """Právě jste dokončili první část studie."""
+quizInstructions = f"""Nyní Vás čeká závěrečný kvíz, který ověří, co jste si z videí zapamatovali.
+
+V kvízu bude celkem 48 otázek, které se budou týkat všech 8 videí, která jste zhlédli. Otázky nebudou rozděleny podle videí, takže nebudete vědět, které otázky se vztahují k jakému videu.
+
+U každé otázky je vždy jedna správná odpověď.
+
+Připomínáme, že za každou správnou odpověď obdržíte dodatečnou finanční odměnu ve výši {QUIZ_BONUS} Kč."""
+
 
 
 class Sound(InstructionsFrame):
@@ -135,10 +142,10 @@ class Sound(InstructionsFrame):
 
 VideoIntro = (InstructionsFrame, {"text": videoinstructions, "proceed": True, "height": "auto"})
 StartVideos = (InstructionsFrame, {"text": startvideos, "proceed": True, "height": "auto"})
-EndVideos = (InstructionsFrame, {"text": endvideos, "proceed": True, "height": "auto"})
 SecondModuleIntro = (InstructionsFrame, {"text": secondmoduleintro, "proceed": True, "height": "auto"})
+QuizIntroduction = (InstructionsFrame, {"text": quizInstructions, "proceed": True, "height": "auto"})
 
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.getcwd()))
-    GUI([Login,  Sound, EndVideos])
+    GUI([Login,  Sound])
