@@ -14,35 +14,34 @@ from comments import Comments
 from login import Login
 from videointros import Sound, VideoIntro, StartVideos, SecondModuleIntro, QuizIntroduction
 from videos import Videos, Attention, Quiz, EndQuestionnaire, Videos2
-from quest import QuestInstructions
-from questionnaire import UPPS
+from questionnaire import UPPS, SCI, SAMS, Mindset, QuestInstructions
 from intervention import Intervention
 
 
-
+    
 
 frames = [Initial,
           Login, 
           Intro,             
           Sound,
           VideoIntro,
-          Intervention, # TO DO
+          Intervention,
           StartVideos,
-          Videos, Attention,
-          Videos, Attention,
-          Videos, Attention,
-          Videos, Attention,
+          Videos2, Attention,
+          Videos2, Attention,
+          Videos2, Attention,
+          Videos2, Attention,
           SecondModuleIntro, 
-          Videos, Attention,
-          Videos, Attention,
-          Videos, Attention,
-          Videos, Attention,
+          Videos2, Attention,
+          Videos2, Attention,
+          Videos2, Attention,
+          Videos2, Attention,
           EndQuestionnaire,
-          QuestInstructions,
+          QuestInstructions, # pridat attention checky
           UPPS,
-          # spanek, SCI
-          # vydelavani, SAMS
-          # mindset
+          SCI,
+          SAMS,
+          Mindset,
           QuizIntroduction,
           Quiz,
           # Postdiction

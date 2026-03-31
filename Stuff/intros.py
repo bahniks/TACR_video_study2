@@ -15,7 +15,8 @@ from login import Login
 
 
 ################################################################################
-# TEXTS
+# TEXTS intros
+
 intro = """Studie se skládá ze série 8 krátkých výukových videí, která se věnují zvládání stresu, psychologické odolnosti a poskytování zpětné vazby. 
 
 Důležité upozornění k formátu: Během sledování výukového videa (na levé straně obrazovky) se může na pravé straně obrazovky objevit sekundární panel s různým obsahem (např. krátká videa, chat nebo jednoduchá hra). 

@@ -13,7 +13,8 @@ from gui import GUI
 from constants import LIMIT, TESTING, QUIZ_BONUS
 from login import Login
 
-
+############################################################################
+# TEXTS videointros
 
 soundcheck = """Pro sledování videí je důležité, abyste měli zapnutý zvuk a nasazená sluchátka.
 
@@ -22,7 +23,7 @@ Nyní si nasaďte sluchátka a kliknutím na tlačítko "Test zvuku" ozkoušejte
 <b>Poté, co ozkoušíte, že zvuk funguje, klikněte na tlačítko "Pokračovat".</b>"""
 
 
-videoinstructions = """Celkem budete sledovat osm videí ve dvou modulech. Ke každému videu je navázáno šest otázek v kvízu, který budete vyplňovat po zhlédnutí videí a vyplnění dotazníků. Celkem tedy bude v kvízu 48 otázek. Kvíz bude obsahovat otázky z každého videa, ale otázky nebudou rozděleny podle videí, takže nebudete vědět, které otázky se vztahují k jakému videu. Za každou správnou odpověď v kvízu získáte 5 Kč. Celkem tedy můžete získat až 240 Kč za správné odpovědi v kvízu.
+videoinstructions = """Celkem budete sledovat osm videí ve dvou modulech. Ke každému videu je navázáno pět otázek v kvízu, který budete vyplňovat po zhlédnutí videí a vyplnění dotazníků. Celkem tedy bude v kvízu 40 otázek. Kvíz bude obsahovat otázky z každého videa, ale otázky nebudou rozděleny podle videí, takže nebudete vědět, které otázky se vztahují k jakému videu. Za každou správnou odpověď v kvízu získáte 5 Kč. Celkem tedy můžete získat až 200 Kč za správné odpovědi v kvízu.
 
 Videa budou zobrazena na levé straně obrazovky. Během sledování videa se může na pravé straně obrazovky objevit sekundární panel s různým obsahem. Obsahu tohoto panelu se nemusíte všímat a nijak se nevztahuje k obsahu videí. Nijak také neovlivní Vaši odměnu a nevztahují se k němu žédné další části studie.
 
@@ -49,12 +50,13 @@ Klikněte na tlačítko "Pokračovat" a video se spustí automaticky."""
 
 quizInstructions = f"""Nyní Vás čeká závěrečný kvíz, který ověří, co jste si z videí zapamatovali.
 
-V kvízu bude celkem 48 otázek, které se budou týkat všech 8 videí, která jste zhlédli. Otázky nebudou rozděleny podle videí, takže nebudete vědět, které otázky se vztahují k jakému videu.
+V kvízu bude celkem 40 otázek, které se budou týkat všech 8 videí, která jste zhlédli. Otázky nebudou rozděleny podle videí, takže nebudete vědět, které otázky se vztahují k jakému videu.
 
 U každé otázky je vždy jedna správná odpověď.
 
 Připomínáme, že za každou správnou odpověď obdržíte dodatečnou finanční odměnu ve výši {QUIZ_BONUS} Kč."""
 
+############################################################################
 
 
 class Sound(InstructionsFrame):

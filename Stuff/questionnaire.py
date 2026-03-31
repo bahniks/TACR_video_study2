@@ -1,3 +1,6 @@
+#! python3
+# -*- coding: utf-8 -*- 
+
 from tkinter import *
 from tkinter import ttk
 import tkinter.font as tkfont
@@ -10,12 +13,37 @@ import os
 
 from common import ExperimentFrame, InstructionsFrame, Question, Measure, read_all
 from gui import GUI
-from constants import TESTING, AUTOFILL
+from constants import ATTENTION_BONUS, BONUS, TESTING, AUTOFILL
+
+
+################################################################################
+# TEXTS questionnaire
+
+questintro = f"""V následující části studie budete odpovídat na otázky o sobě, Vašich postojích a názorech. Tato část by měla trvat asi 10 minut.
+
+Každou otázku si pečlivě přečtěte. Snažte se však na otázky nemyslet příliš dlouho; první odpověď, která Vám přijde na mysl, je obvykle nejlepší.
+
+Mezi dotazníky bude jedna položka měřící Vaší pozornost, pokud odpovíte správně, dostanete dodatečných {ATTENTION_BONUS} Kč."""
+
+attentiontext = "Chcete-li prokázat, že zadání věnujete pozornost, vyberte možnost "
+
+bonusGained = f"Protože jste odpověděl(a) správně na všechny kontrolní otázky, získáváte dalších {BONUS} Kč."
+bonusNotGained = f"Protože jste neodpověděl(a) správně na všechny kontrolní otázky, nezískáváte dalších {BONUS} Kč."
 
 
 intro = "Označte, do jaké míry souhlasíte s následujícímí tvrzeními, na poskytnuté škále."
 
 uppsIntro = """Přečtěte si prosím každé tvrzení a označte, nakolik s ním souhlasíte."""
+samsIntro = """Všechny následující položky se vztahují k otázce: "Proč se vzděláváte?" Ohodnoťte, do jaké míry nakolik každá položka odpovídá Vaší situaci."""
+sciIntro1 = "<b>Když se zamyslíte nad typickou nocí v posledním měsíci…</b>"
+sciIntro2 = "\nKdyž se zamyslíte nad uplynulým měsícem, do jaké míry špatný spánek"
+sciIntro3 = "\nNakonec…"
+mindsetIntro = "Do jaké míry souhlasíte nebo nesouhlasíte s těmito tvrzeními?"
+
+################################################################################
+
+
+
 
 
 class Questionnaire(ExperimentFrame):
@@ -165,8 +193,280 @@ class Questionnaire(ExperimentFrame):
             self.next.invoke()
 
 
+class MeasureQuestionnaire(InstructionsFrame):
+    def __init__(self, root, text, questions, options, filetext = "", **kwargs):
+        super().__init__(root, text = text, proceed = True, savedata = True)
+
+        self.root = root
+        self.questions = self.load_questions(questions)
+        self.options = self.load_options(options, len(self.questions))
+        self.filetext = filetext
+        self.measures = []
+
+        for count, question in enumerate(self.questions, start = 2):
+            measure = Measure(self, text = question, values = self.options[count - 2], left = "", right = "", function = self.enable, **kwargs)
+            measure.grid(row = count, column = 1)
+            self.measures.append(measure)
+
+        self.next.grid(row = len(self.measures) + 2, column = 1)
+
+        self.rowconfigure(0, weight = 3)
+        self.rowconfigure(1, weight = 1)
+        for row in range(2, len(self.measures) + 2):
+            self.rowconfigure(row, weight = 1)
+        self.rowconfigure(len(self.measures) + 2, weight = 2)
+        self.rowconfigure(len(self.measures) + 3, weight = 3)
+
+        self.next["state"] = "disabled"
+
+    @staticmethod
+    def load_questions(questions):
+        if isinstance(questions, str) and os.path.exists(os.path.join(os.path.dirname(__file__), questions)):
+            return [line for line in read_all(questions).split("\n") if line]
+        return list(questions)
+
+    @staticmethod
+    def load_options(options, question_count):
+        if isinstance(options, str) and os.path.exists(os.path.join(os.path.dirname(__file__), options)):
+            option_sets = [line.split("\t") for line in read_all(options).split("\n") if line]
+        else:
+            option_sets = list(options)
+
+        if option_sets and isinstance(option_sets[0], (list, tuple)):
+            if len(option_sets) == 1:
+                return [list(option_sets[0]) for _ in range(question_count)]
+            if len(option_sets) != question_count:
+                raise ValueError("Options count must match questions count or contain exactly one shared option set.")
+            return [list(option_set) for option_set in option_sets]
+
+        return [list(option_sets) for _ in range(question_count)]
+
+    def enable(self):
+        if all(measure.answer.get() for measure in self.measures):
+            self.next["state"] = "normal"
+        else:
+            self.next["state"] = "disabled"
+
+    def write(self):
+        if self.filetext:
+            self.file.write(self.filetext + "\n")
+        self.file.write(self.id + "\t" + "\t".join(measure.answer.get() for measure in self.measures) + "\n\n")
+
+    def gothrough(self):
+        for measure in self.measures:
+            random.choice(measure.radios).invoke()
+        self.update()
+        sleep(0.5)
+        self.next.invoke()
 
 
+class BlockQuestionnaire(ExperimentFrame):
+    def __init__(self, root, perpage, file, name, left, right, options = 5, shuffle = True,
+                 instructions = "", height = 3, width = 80, center = False, checks = 0, wraplength = "auto"):
+        super().__init__(root)
+
+        self.perpage = perpage
+        self.left = left
+        self.right = right
+        self.options = options
+        self.checks = checks != 0
+        self.checksNumber = checks
+        self.name = name
+        self.wraplength = wraplength
+
+        self.file.write("{}\n".format(name))
+
+        if instructions:
+            self.instructions = Text(self, height = height, relief = "flat", width = width, font = "helvetica 15", wrap = "word")
+            self.instructions.grid(row = 1, column = 0, columnspan = 3)
+            self.instructions.insert("1.0", instructions, "text")
+            if center:
+                self.instructions.tag_config("text", justify = "center") 
+            self.instructions["state"] = "disabled"
+
+        self.questions = [i for i in read_all(file, comments = True).split("\n")]
+        # with open(os.path.join("Stuff", file), encoding = "utf-8") as f:
+        #     for line in f:
+        #         self.questions.append(line.strip())
+
+        if shuffle:
+            random.shuffle(self.questions)
+
+        if checks:
+            spread = len(self.questions)//checks
+            positions = [random.randint(self.perpage//2 + spread*i, spread*(i+1) - self.perpage//2) for i in range(checks)]
+            for i in range(checks):
+                self.questions.insert(positions[i], attentiontext + str(random.randint(1, options)) + ".")
+
+        ttk.Style().configure("TButton", font = "helvetica 15")
+        self.next = ttk.Button(self, text = "Pokračovat", command = self.nextFun, state = "disabled")
+        self.next.grid(row = self.perpage*2 + 4, column = 1)
+
+        self.rowconfigure(0, weight = 1)
+        self.rowconfigure(1, weight = 2)
+        self.rowconfigure(self.perpage*2 + 4, weight = 1)
+        self.rowconfigure(self.perpage*2 + 5, weight = 3)
+        self.columnconfigure(0, weight = 1)
+        self.columnconfigure(2, weight = 1)
+
+        self.mnumber = 0
+        
+        self.createQuestions()
+
+    def createQuestions(self):
+        self.measures = []
+        for i in range(self.perpage):
+            m = Likert(self, self.questions[self.mnumber], shortText = str(self.mnumber + 1),
+                       left = self.left, right = self.right, options = self.options, wraplength=self.wraplength)
+            m.grid(column = 0, columnspan = 3, row = i*2 + 3)
+            self.rowconfigure(i*2 + 4, weight = 1)
+            self.mnumber += 1
+            self.measures.append(m)
+            if self.mnumber == len(self.questions):
+                break
+
+    def nextFun(self):
+        for measure in self.measures:
+            measure.write()
+            measure.grid_forget()
+        if self.mnumber == len(self.questions):
+            self.file.write("\n")
+            if self.checks:
+                self.file.write("Attention checks\n")
+                correct_checks = str(self.root.status["attention_checks"])
+                self.file.write(self.id + "\t" + self.name + "\t" + correct_checks + "\n\n")
+                if correct_checks == str(self.checksNumber):
+                    self.root.status["results"] += [bonusGained]
+                    self.root.status["reward"] += BONUS                    
+                else:
+                    self.root.status["results"] += [bonusNotGained]
+            self.destroy()
+            self.root.nextFrame()
+        else:
+            self.next["state"] = "disabled"
+            self.createQuestions()
+
+    def check(self):
+        for m in self.measures:
+            if not m.answer.get():
+                return
+        else:
+            self.next["state"] = "!disabled"
+
+    def gothrough(self):
+        self.goingThrough = True
+        for m in self.measures:
+            choice = random.randint(1, self.options)
+            m.answer.set(str(choice))
+        self.next["state"] = "!disabled"
+        self.update()
+        sleep(0.5)
+        self.next.invoke()
+        if not self.mnumber == len(self.questions) and self.goingThrough:
+            self.gothrough()
+        else:
+            self.goingThrough = False
+            self.gothrough()
+
+
+
+
+class Likert(Canvas):
+    def __init__(self, root, text, options = 5, shortText = "", left = "strongly disagree", right = "strongly agree", wraplength = "auto"):
+        super().__init__(root)
+
+        if wraplength == "auto":
+            if hasattr(root.root, "screenwidth"):
+                wraplength = root.root.screenwidth * 0.9
+            elif hasattr(root, "screenwidth"):
+                root.screenwidth * 0.9
+            else:
+                wraplength = 900
+
+        self.root = root
+        self.text = text
+        self.short = shortText
+        self.answer = StringVar()
+        self["background"] = "white"
+        self["highlightbackground"] = "white"
+        self["highlightcolor"] = "white"
+
+        ttk.Style().configure("TRadiobutton", background = "white", font = "helvetica 15")
+
+        self.question = ttk.Label(self, text = text, background = "white", anchor = "center", font = "helvetica 15", wraplength=wraplength)
+        self.question.grid(column = 0, row = 0, columnspan = options + 2, sticky = S)
+
+        self.left = ttk.Label(self, text = left, background = "white", font = "helvetica 14")
+        self.right = ttk.Label(self, text = right, background = "white", font = "helvetica 14")
+        self.left.grid(column = 0, row = 1, sticky = E, padx = 5)
+        self.right.grid(column = options + 1, row = 1, sticky = W, padx = 5)           
+
+        for value in range(1, options + 1):
+            ttk.Radiobutton(self, text = str(value), value = value, variable = self.answer,
+                            command = self.check).grid(row = 1, column = value, padx = 4)
+
+        self.columnconfigure(0, weight = 1)
+        self.columnconfigure(options + 1, weight = 1)
+        self.rowconfigure(0, weight = 1)
+
+        if False: #TESTING:
+            self.answer.set(str(random.randint(1, options)))
+
+
+    def write(self):
+        if attentiontext in self.text:
+            if not "attention_checks" in self.root.root.status:
+                self.root.root.status["attention_checks"] = 0
+            if self.answer.get() == self.text[-2]:
+                self.root.root.status["attention_checks"] += 1
+        else:
+            ans = "{}\t{}\t{}\n".format(self.short, self.answer.get(), self.text.replace("\t", " "))
+            self.root.file.write(self.root.id + "\t" + ans)
+
+
+    def check(self):
+        self.root.check()
+
+
+
+class SCI(MeasureQuestionnaire):
+    def __init__(self, root):
+        InstructionsFrame.__init__(self, root, text=sciIntro1, proceed=True, savedata=True)
+
+        self.root = root
+        questions = self.load_questions("sleep_questions.txt")
+        options = self.load_options("sleeep_answers.txt", len(questions))
+        self.filetext = "SCI"
+        self.measures = []
+
+        kwargs = {"questionPosition": "above", "labelPosition": "next", "filler": 800}
+
+        # rows 2-5: measures 1-4, row 6: sciIntro2, rows 7-9: measures 5-7, row 10: sciIntro3, row 11: measure 8
+        row_map = [2, 3, 4, 5, 7, 8, 9, 11]
+
+        for i, (question, option_set) in enumerate(zip(questions, options)):
+            measure = Measure(self, text=question, values=option_set, left="", right="",
+                              function=self.enable, **kwargs)
+            measure.grid(row=row_map[i], column=1)
+            self.measures.append(measure)
+
+        ttk.Label(self, text=sciIntro2, background="white",
+                  font="helvetica 15 bold", anchor="center").grid(row=6, column=1, pady=10)
+        ttk.Label(self, text=sciIntro3, background="white",
+                  font="helvetica 15 bold", anchor="center").grid(row=10, column=1, pady=10)
+
+        self.next.grid(row=12, column=1)
+
+        self.rowconfigure(0, weight=3)
+        self.rowconfigure(1, weight=0)
+        for r in row_map:
+            self.rowconfigure(r, weight=1)
+        self.rowconfigure(6, weight=1)
+        self.rowconfigure(10, weight=1)
+        self.rowconfigure(12, weight=2)
+        self.rowconfigure(13, weight=3)
+
+        self.next["state"] = "disabled"
 
 UPPS = (Questionnaire,
                 {"words": "upps.txt",
@@ -187,9 +487,39 @@ UPPS = (Questionnaire,
                     "fixedlines": 2,
                     "pady": 5})
 
+SAMS = (BlockQuestionnaire,
+                {"perpage": 7,
+                    "file": "sams.txt",
+                    "name": "SAMS",
+                    "left": "Vůbec neodpovídá",
+                    "right": "Přesně odpovídá",
+                    "options": 7,
+                    "shuffle": True,
+                    "instructions": samsIntro,
+                    "wraplength": 900}) 
 
+Mindset = (BlockQuestionnaire,
+                {"perpage": 3,
+                    "file": "mindset.txt",
+                    "name": "Mindset",
+                    "left": "silně nesouhlasím",
+                    "right": "silně souhlasím",
+                    "options": 6,
+                    "shuffle": True,
+                    "instructions": mindsetIntro,
+                    "wraplength": 800})
+
+
+# class Hexaco(BlockQuestionnaire):
+#     def __init__(self, root):
+#         super().__init__(root, 9, "hexaco.txt", "Hexaco", instructions = hexacoinstructions, width = 85,
+#                          left = "silně nesouhlasím", right = "silně souhlasím",
+#                          height = 3, options = 5, center = True, checks = 3)
+
+
+QuestInstructions = (InstructionsFrame, {"text": questintro, "height": 15})
 
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.getcwd()))
-    GUI([UPPS])
+    GUI([SCI, QuestInstructions, Mindset, UPPS, SAMS])

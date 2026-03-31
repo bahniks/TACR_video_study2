@@ -48,7 +48,7 @@ class Login(InstructionsFrame):
                 if "start" in response:
                     self.update_intros()
                     self.progressBar.stop()
-                    self.write(response)
+                    self.write()
                     self.nextFun()                      
                     break
             count += 1                  
@@ -61,14 +61,15 @@ class Login(InstructionsFrame):
     def update_intros(self):
         self.root.status["condition"] = random.choice(["nudge", "boost", "control"])
         self.root.status["videoNumber"] = 1
-        self.root.status["distrations1"] = ["chat", "game", "video", "control"]
-        self.root.status["distrations2"] = ["chat", "game", "video", "control"]
-        random.shuffle(self.root.status["distrations1"])
-        random.shuffle(self.root.status["distrations2"])                     
+        self.root.status["distractions1"] = ["chat", "game", "tiktok", "control"]
+        self.root.status["distractions2"] = ["chat", "game", "tiktok", "control"]
+        self.root.status["distractions"] = self.root.status["distractions1"] + self.root.status["distractions2"]
+        random.shuffle(self.root.status["distractions1"])
+        random.shuffle(self.root.status["distractions2"])                     
 
-    def write(self, response):
+    def write(self):
         self.file.write("Login" + "\n")
-        self.file.write(self.id + self.root.status["condition"] + "\t" + self.root.texts["version1"] + "\t" + self.root.texts["version2"] + "\n\n")        
+        self.file.write(self.id + self.root.status["condition"] + "\t" + "\t".join(self.root.status["distractions"]) + "\n\n")        
 
     def gothrough(self):
         self.run()

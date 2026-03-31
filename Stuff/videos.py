@@ -18,8 +18,12 @@ from tiktok import TikTok
 from game import Game
 
 from constants import QUIZ_BONUS
+from questionnaire import MeasureQuestionnaire
 
 
+
+############################################################################
+# TEXTS videos
 
 imiInstructions = """Nyní Vás prosíme o hodnocení zhlédnutého videa. 
 U každého z následujících tvrzení uveďte, nakolik je pro vás pravdivé."""
@@ -63,6 +67,10 @@ endInstructions = """Výborně, máte za sebou sledování všech výukových vi
 Než přistoupíme k dotazníkům a závěrečnému kvízu, rádi bychom vás požádali o celkové zhodnocení toho, jak se vám během celého předchozího úkolu dařilo udržet pozornost a zda jste při tom využívali nějaké záměrné strategie.
 Odpovídejte prosím co nejupřímněji podle toho, jak jste situaci celkově vnímali."""
 
+############################################################################
+
+
+_vlc_instance = vlc.Instance('--aout=waveout', '--vout=direct3d9')
 
 class Videos(ExperimentFrame):
     def __init__(self, root):
@@ -80,14 +88,13 @@ class Videos(ExperimentFrame):
         self.rowconfigure(2, weight = 1)
 
         # Initialize VLC player
-        self.instance = vlc.Instance('--vout=direct3d9')
-        self.player = self.instance.media_player_new()
+        self.player = _vlc_instance.media_player_new()
 
         # Set the video output to the tkinter canvas
         self.player.set_hwnd(self.canvas.winfo_id())
 
         # Load the video file
-        media = self.instance.media_new(self.video_path)
+        media = _vlc_instance.media_new(self.video_path)
         self.player.set_media(media)
 
         # Bind the VLC event manager to detect when the video ends
@@ -117,6 +124,21 @@ class Videos(ExperimentFrame):
         return os.path.join(os.getcwd(), "Stuff", "Videos", f"0{trial}.mp4")
 
 
+class Empty:
+    def __init__(self, canvas, width=400, height=850):
+        self.canvas = canvas
+        self.width = width
+        self.height = height
+
+        self.canvas.configure(width=self.width, height=self.height)
+        self.canvas.configure(background="white", highlightbackground="white", highlightcolor="white")
+
+    def play(self):
+        return
+
+    def stop(self):
+        return
+
 
 class Videos2(ExperimentFrame):
     def __init__(self, root):
@@ -144,12 +166,11 @@ class Videos2(ExperimentFrame):
         self.rowconfigure(2, weight=1)
 
         # Initialize VLC player for left video with audio output
-        self.instance = vlc.Instance('--aout=waveout', '--vout=direct3d9')
-        self.player = self.instance.media_player_new()
+        self.player = _vlc_instance.media_player_new()
         self.player.set_hwnd(self.canvas1.winfo_id())
 
         # Load the video file
-        media = self.instance.media_new(self.video_path)
+        media = _vlc_instance.media_new(self.video_path)
         self.player.set_media(media)
 
         # Track video end
@@ -162,27 +183,37 @@ class Videos2(ExperimentFrame):
         # Play the video
         self.player.play()
 
-        self.content_type = random.choice(["chat", "tiktok", "game"])
-        #self.content_type = "chat"  # For testing purposes, you can set this to a specific content type
+        videos2_index = self.root.status.get("videos2_index", 0)
+        self.content_type = self.root.status["distractions"][videos2_index]
+        self.root.status["videos2_index"] = videos2_index + 1        
         content_map = {
             "chat": Chat,
             "tiktok": TikTok,
             "game": Game,
+            "control": Empty
         }
         self.right_content = content_map[self.content_type](self.canvas2, width=400, height=850)
         self.right_content.play()
 
         ttk.Style().configure("TButton", font="helvetica 15")
         self.next = ttk.Button(self, text="Pokračovat", command=self.stop)
-        self.next.grid(row=2, column=1)
+        self.next.grid(row=2, column=1, columnspan=2)
 
+        ttk.Style().configure("Overlay.TCheckbutton", font="helvetica 15", background="white")
+        ttk.Style().map("Overlay.TCheckbutton", background=[("active", "white"), ("selected", "white")])
         self.overlay_toggle = ttk.Checkbutton(
             self,
             text="Šedý filtr vpravo",
             variable=self.overlay_enabled,
-            command=self.toggle_right_overlay
+            command=self.toggle_right_overlay,
+            style="Overlay.TCheckbutton",
+            takefocus=False,
         )
-        self.overlay_toggle.grid(row=2, column=2, sticky="e", padx=5)
+        self.overlay_toggle.bind("<FocusIn>", lambda event: self.canvas2.focus_set())
+        if self.root.status.get("condition") == "nudge":
+            self.overlay_toggle.grid(row=2, column=2, padx=5)
+            self.overlay_enabled.set(True)
+            self.toggle_right_overlay()
         if not TESTING:
             self.next["state"] = "disabled"
 
@@ -211,7 +242,7 @@ class Videos2(ExperimentFrame):
 
         self.right_overlay_window = Toplevel(self)
         self.right_overlay_window.overrideredirect(True)
-        self.right_overlay_window.configure(background="#808080")
+        self.right_overlay_window.configure(background="#4F4F4F")
         self.right_overlay_window.attributes("-alpha", 0.45)
         self.right_overlay_window.transient(self.winfo_toplevel())
 
@@ -254,97 +285,6 @@ class Videos2(ExperimentFrame):
     def getVideo(self):
         trial = self.root.status["videoNumber"]
         return os.path.join(os.getcwd(), "Stuff", "Videos", f"0{trial}.mp4")
-
-
-class JOL(InstructionsFrame):
-    def __init__(self, root):
-        super().__init__(root, text = "", proceed = True, savedata = True)
-
-        self.root = root
-
-        q = "Kolik informací z videa si myslíte, že si budete schopni vybavit přibližně za 2-3 minuty?"
-        options = ["0 % (nic z toho)", "20 %", "40 %", "60 %", "80 %", "100 % (vše)"]
-
-        self.measure = Measure(self, text = q, values = options, left = "", right = "", questionPosition = "above", filler = 700, function=self.enable)
-        self.measure.grid(row = 1, column = 1)
-
-        self.next["state"] = "disabled"
-
-    def enable(self):
-        self.next["state"] = "normal"
-
-    def write(self):
-        trial = self.root.status["videoNumber"] - 1
-        version = self.root.status["versions"][trial - 1]
-        self.file.write("JOL\n")
-        self.file.write(self.id + "\t" + str(trial) + "\t" + version + "\t" + self.measure.answer.get() + "\n\n")
-
-
-class MeasureQuestionnaire(InstructionsFrame):
-    def __init__(self, root, text, questions, options, filetext = "", **kwargs):
-        super().__init__(root, text = text, proceed = True, savedata = True)
-
-        self.root = root
-        self.questions = self.load_questions(questions)
-        self.options = self.load_options(options, len(self.questions))
-        self.filetext = filetext
-        self.measures = []
-
-        for count, question in enumerate(self.questions, start = 2):
-            measure = Measure(self, text = question, values = self.options[count - 2], left = "", right = "", function = self.enable, **kwargs)
-            measure.grid(row = count, column = 1)
-            self.measures.append(measure)
-
-        self.next.grid(row = len(self.measures) + 2, column = 1)
-
-        self.rowconfigure(0, weight = 3)
-        self.rowconfigure(1, weight = 1)
-        for row in range(2, len(self.measures) + 2):
-            self.rowconfigure(row, weight = 1)
-        self.rowconfigure(len(self.measures) + 2, weight = 2)
-        self.rowconfigure(len(self.measures) + 3, weight = 3)
-
-        self.next["state"] = "disabled"
-
-    @staticmethod
-    def load_questions(questions):
-        if isinstance(questions, str) and os.path.exists(os.path.join(os.path.dirname(__file__), questions)):
-            return [line for line in read_all(questions).split("\n") if line]
-        return list(questions)
-
-    @staticmethod
-    def load_options(options, question_count):
-        if isinstance(options, str) and os.path.exists(os.path.join(os.path.dirname(__file__), options)):
-            option_sets = [line.split("\t") for line in read_all(options).split("\n") if line]
-        else:
-            option_sets = list(options)
-
-        if option_sets and isinstance(option_sets[0], (list, tuple)):
-            if len(option_sets) == 1:
-                return [list(option_sets[0]) for _ in range(question_count)]
-            if len(option_sets) != question_count:
-                raise ValueError("Options count must match questions count or contain exactly one shared option set.")
-            return [list(option_set) for option_set in option_sets]
-
-        return [list(option_sets) for _ in range(question_count)]
-
-    def enable(self):
-        if all(measure.answer.get() for measure in self.measures):
-            self.next["state"] = "normal"
-        else:
-            self.next["state"] = "disabled"
-
-    def write(self):
-        if self.filetext:
-            self.file.write(self.filetext + "\n")
-        self.file.write(self.id + "\t" + "\t".join(measure.answer.get() for measure in self.measures) + "\n\n")
-
-    def gothrough(self):
-        for measure in self.measures:
-            random.choice(measure.radios).invoke()
-        self.update()
-        sleep(0.5)
-        self.next.invoke()
 
 
 class Attention(MeasureQuestionnaire):
@@ -499,48 +439,6 @@ class Quiz(InstructionsAndUnderstanding):
             self.createQuestion()     
 
 
-IMI1 = (Questionnaire,
-                {"words": "imi.txt",
-                 "question": imiInstructions,
-                 "labels": imiScale,
-                 "values": 5,
-                 "labelwidth": 11,
-                 "text": False,
-                 "fontsize": 13,
-                 "blocksize": 5,
-                 "wraplength": 700,
-                 "filetext": "IMI1",
-                 "fixedlines": 0,
-                 "pady": 3})
-
-IMI2 = (Questionnaire,
-                {"words": "imi.txt",
-                 "question": imiInstructions,
-                 "labels": imiScale,
-                 "values": 5,
-                 "labelwidth": 11,
-                 "text": False,
-                 "fontsize": 13,
-                 "blocksize": 5,
-                 "wraplength": 700,
-                 "filetext": "IMI2",
-                 "fixedlines": 0,
-                 "pady": 3})
-
-IMI3 = (Questionnaire,
-                {"words": "imi2.txt",
-                 "question": imiInstructions2,
-                 "labels": imiScale,
-                 "values": 5,
-                 "labelwidth": 11,
-                 "text": False,
-                 "fontsize": 13,
-                 "blocksize": 5,
-                 "wraplength": 700,
-                 "filetext": "IMI3",
-                 "fixedlines": 0,
-                 "pady": 3})
-
 
 def getQuestions(filename):
     with open(os.path.join(os.path.dirname(__file__), filename), "r", encoding = "utf-8") as f:
@@ -568,4 +466,4 @@ Quiz = (Quiz, {"text": quizInstructions, "height": "auto", "name": "Quiz", "cont
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.getcwd()))
-    GUI([Login, EndQuestionnaire, Quiz, Attention, Videos2, Videos])
+    GUI([Login, Videos2, EndQuestionnaire, Quiz, Attention, Videos2, Videos])

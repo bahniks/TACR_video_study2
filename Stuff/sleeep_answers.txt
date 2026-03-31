@@ -1,8 +1,8 @@
-Žádný problém	Lehké zpoždění	Větší zpoždění	Velké zpoždění nebo žádný spánek
-Žádný problém	Zanedbatelný problém	Vážnější problém	Závažný problém nebo žádný spánek
-Ne dříve	Lehce dříve	Docela dříve	O dost dříve
-Dostatečná	Lehce nedostatečná	Docela nedostatečná	Velmi nedostatečná nebo žádný spánek
-Uspokojivá	Lehce neuspokojivá	Docela neuspokojivá	Velmi neuspokojivá nebo žádný spánek
-Normální	Lehce pokleslý	Docela pokleslý	Velmi pokleslý
-Normální	Lehce pokleslé	Docela pokleslé	Velmi pokleslé
-Žádná	Lehká	Značná	Intenzivní
+0-15 min	16-30 min	31-45 min	46-60 min	≥61 min
+0-15 min	16-30 min	31-45 min	46-60 min	≥61 min
+0-1	2	3	4	5-7
+velmi dobrá	dobrá	průměrná	špatná	velmi špatná
+Vůbec ne	Trochu	Do určité míry	Hodně	Velmi hodně
+Vůbec ne	Trochu	Do určité míry	Hodně	Velmi hodně
+Vůbec ne	Trochu	Do určité míry	Hodně	Velmi hodně
+Nemám problémy se spánkem / <1 měsíc	1-2 měsíce	3-6 měsíců	7-12 měsíců	> rok

@@ -316,7 +316,7 @@ class Game:
         self.canvas.create_text(
             self.score_x,
             self.info_y,
-            text=f"Score: {self.score}",
+            text=f"Skóre: {self.score}",
             fill="#111111",
             anchor="w",
             font=("Helvetica", 11, "bold")
@@ -325,7 +325,7 @@ class Game:
         self.canvas.create_text(
             self.speed_x,
             self.info_y,
-            text=f"Speed: {self.speed_level}",
+            text=f"Rychlost: {self.speed_level}",
             fill="#222222",
             anchor="e",
             font=("Helvetica", 10, "bold")
@@ -334,7 +334,7 @@ class Game:
         self.canvas.create_text(
             self.width // 2,
             self.height - 4,
-            text="[←] Left   [→] Right   [↑] Rotate   [↓] Down   [SPACE] Drop",
+            text="[←] Vlevo   [→] Vpravo   [↑] Otočit   [↓] Dolů   [SPACE] Shodit",
             fill="#333333",
             anchor="s",
             font=("Helvetica", 11, "bold")
@@ -352,7 +352,7 @@ class Game:
             self.canvas.create_text(
                 self.offset_x + self.board_width // 2,
                 self.offset_y + self.board_height // 2,
-                text="GAME OVER",
+                text="KONEC HRY",
                 font=("Helvetica", 24, "bold"),
                 fill="#ff4d4d"
             )
@@ -367,9 +367,9 @@ class Game:
                 center_x = self.offset_x + self.board_width // 2
                 center_y = self.offset_y + self.board_height // 2 + 42
                 if countdown_text == "START":
-                    countdown_label = "Restarting..."
+                    countdown_label = "Spouštím..."
                 else:
-                    countdown_label = f"Restart in: {countdown_text}"
+                    countdown_label = f"Restart za: {countdown_text}"
 
                 text_id = self.canvas.create_text(
                     center_x,
