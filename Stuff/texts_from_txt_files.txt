@@ -1,3 +1,21 @@
+##### mindset.txt #####
+Můžu se učit novým věcem, ale nemůžu ovlivnit svoji inteligenci jako takovou.  
+Mám určitou úroveň inteligence a nemohu toho udělat mnoho pro to, abych ji změnil(a). 
+Moje inteligence je něčím, co na sobě nemohu příliš změnit.
+
+
+
+##### nfc.txt #####
+Dávám přednost složitým problémům před jednoduchými.
+Rád mám zodpovědnost za řešení situace, která vyžaduje hodně přemýšlení.
+Přemýšlení není moje představa zábavy.
+Raději budu dělat něco, co vyžaduje málo přemýšlení, než něco, co určitě bude výzvou pro mé schopnosti přemýšlet. 
+Opravdu mě baví úkol, který vyžaduje vymýšlení nových řešení problémů.
+Raději bych dal(a) přednost úkolu, který je intelektuální, obtížný a důležitý, než úkolu, který je sice trochu důležitý, ale nevyžaduje mnoho přemýšlení.
+
+
+
+##### quiz.txt #####
 Jaké přirovnání ve videu ilustruje, že si často neuvědomujeme, jak dobře věci fungují, protože jsme si na ně zvykli? 
 Srovnání rychlosti dnešních vlaků s koňskými povozy. 
 Srovnání moderních smartphonů s pevnou linkou. 
@@ -237,3 +255,81 @@ Protože kritika obvykle zpochybňuje naši kompetenci
 *Protože mozek chrání reputaci a kritiku vyhodnotí jako ohrožení
 Protože negativní informace zpracováváme pomaleji než pozitivní
 Protože kritika aktivuje hlavně analytické uvažování a potřebu obhajoby
+
+
+
+##### sams.txt #####
+Protože si myslím, že vzdělávání mi pomůže lépe se připravit na kariéru, kterou jsem si vybral/a.
+Protože mi to nakonec umožní uplatnit se v oblasti, která mě baví.
+Abych později získal/a prestižnější pracovní uplatnění.
+Abych měl/a později lepší příjem.
+Pro potěšení, které zažívám, když objevuji nové, dosud nepoznané věci.
+Protože mi učení umožňuje pokračovat v poznávání mnoha věcí, které mě zajímají.
+Pro potěšení, které zažívám, když čtu zajímavé texty a autory.
+Pro potěšení, které zažívám, když se cítím zcela pohlcen/a tím, co jsem četl/a nebo poznával/a.
+Pro potěšení, které zažívám, když překonávám sám/sama sebe v osobním rozvoji.
+Protože mi vzdělávání umožňuje zažít osobní uspokojení ve snaze dosahovat vynikajících výsledků.
+Kvůli tomu, že když jsem ve vzdělávání úspěšný/á, cítím se důležitě.
+Protože chci sám/sama sobě dokázat, že mohu v učení uspět.
+Nechápu, proč se dál vzdělávám, a upřímně, je mi to úplně jedno.
+Nevím; nechápu, co při učení vlastně dělám.
+
+
+
+##### sleeep_answers.txt #####
+0-15 min	16-30 min	31-45 min	46-60 min	≥61 min
+0-15 min	16-30 min	31-45 min	46-60 min	≥61 min
+0-1	2	3	4	5-7
+velmi dobrá	dobrá	průměrná	špatná	velmi špatná
+Vůbec ne	Trochu	Do určité míry	Hodně	Velmi hodně
+Vůbec ne	Trochu	Do určité míry	Hodně	Velmi hodně
+Vůbec ne	Trochu	Do určité míry	Hodně	Velmi hodně
+Nemám problémy se spánkem / <1 měsíc	1-2 měsíce	3-6 měsíců	7-12 měsíců	> rok
+
+
+
+##### sleep_questions.txt #####
+… Jak dlouho Vám trvá usnout?
+… Pokud se během noci probudíte, jak dlouho jste celkem vzhůru? 
+… Kolik nocí v týdnu máte problémy se spánkem? 
+… Jak byste hodnotil/a kvalitu svého spánku? 
+… ovlivnil Vaši náladu, energii nebo vztahy?
+… ovlivnil Vaši koncentraci, produktivitu nebo schopnost zůstat vzhůru?
+… Vás celkově trápí?
+… Jak dlouho už máte problémy se spánkem? 
+
+
+
+##### social.txt #####
+Jak často jste v posledním roce strávili hodně času přemýšlením o sociálních médiích nebo plánováním používání sociálních médií?
+Jak často jste v posledním roce pociťovali nutkání používat sociální média stále častěji?
+Jak často jste v posledním roce používali sociální média, abyste zapomněli na osobní problémy?
+Jak často jste se v posledním roce snažili omezit používání sociálních médií, ale bez úspěchu?
+Jak často jste se v posledním roce stávali neklidnými nebo znepokojenými, pokud jste měli zakázáno používat sociální média?
+Jak často jste v posledním roce používali sociální média natolik, že to mělo negativní dopad na vaši práci/studium?
+
+
+
+##### upps.txt #####
+Když se cítím špatně, často udělám věci, kterých později lituji, abych se hned cítil/a lépe.
+Někdy, když se cítím špatně, nedokážu přestat s tím, co dělám, i když se kvůli tomu cítím ještě hůř.
+Když jsem rozrušený/á, často jednám bez přemýšlení.
+Když se cítím odmítnutý/á, často řeknu věci, kterých později lituji.
+Obecně rád/a dotahuji věci do konce.
+Nedokončené úkoly mě opravdu trápí.
+Jakmile se do něčeho pustím, nerad/a přestávám.
+Dokončím, co začnu.
+Moje myšlení je obvykle pečlivé a cílevědomé.
+Rád/a se zastavím a věci si promyslím, než je udělám.
+Mám tendenci oceňovat a sledovat racionální a rozumný přístup k věcem.
+Obvykle pečlivě přemýšlím, než něco udělám.
+Docela mě baví riskovat.
+Vítám nové a vzrušující zážitky a pocity, i když jsou trochu děsivé a nekonvenční.
+Rád/a bych se naučil/a létat letadlem.
+Užíval/a bych si pocit velmi rychlého lyžování dolů z vysokého horského svahu.
+Když mám skvělou náladu, mám tendenci dostávat se do situací, které by mi mohly způsobit problémy.
+Když mám skvělou náladu, mám tendenci ztrácet kontrolu.
+Ostatní jsou šokováni nebo znepokojeni věcmi, které dělám, když jsem velmi nadšený/á.
+Když jsem opravdu nadšený/á, mám tendenci jednat bez přemýšlení.
+
+

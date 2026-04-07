@@ -13,7 +13,7 @@ from videos import Videos
 ############################################################################
 # TEXTS intervention
 
-nudgeinstructions = """Během sledování videi bude vedlejší panel překryt poloprůhledným šedým závojem, který indikuje, že je aktivní "Režim soustředění". Tento režim se automaticky zapne na začátku každého videa. 
+nudgeinstructions = """Během sledování videi bude vedlejší panel překryt poloprůhledným šedým závojem, který indikuje, že je aktivní <b>"Režim soustředění"</b>. Tento režim se automaticky zapne na začátku každého videa. 
 
 Režim soustředění můžete kdykoliv libovolně vypnout nebo zapnout pomocí přepínacího tlačítka na obrazovce."""
 

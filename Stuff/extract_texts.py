@@ -1,9 +1,11 @@
 #! python3
-"""Extract top TEXTS blocks from Python files into texts.txt.
+"""Extract text content from files in a folder.
 
-The script scans .py files in a folder, finds the first block enclosed by lines
-containing 3 or more '#' characters, and keeps the block only if it contains a
-marker line exactly matching: # TEXTS <filename_without_py>
+- Python mode: scans .py files, finds the first block enclosed by lines
+    containing 3 or more '#' characters, and keeps it only if it contains
+    marker line: # TEXTS <filename_without_py>.
+- TXT mode: collects contents of all .txt files in the folder, excluding
+    output files produced by this script.
 """
 
 from __future__ import annotations
@@ -68,31 +70,66 @@ def extract_texts(folder: Path) -> tuple[list[str], int]:
         found += 1
         output_parts.append(f"##### {py_file.name} #####")
         output_parts.extend(block)
-        output_parts.append("")
+        output_parts.extend(["", "", ""])
+
+    return output_parts, found
+
+
+def extract_txt_files(folder: Path, excluded_names: set[str]) -> tuple[list[str], int]:
+    """Extract full contents from .txt files in folder, excluding selected names."""
+    output_parts: list[str] = []
+    found = 0
+
+    for txt_file in sorted(folder.glob("*.txt")):
+        if txt_file.name in excluded_names:
+            continue
+
+        found += 1
+        output_parts.append(f"##### {txt_file.name} #####")
+        output_parts.extend(txt_file.read_text(encoding="utf-8").splitlines())
+        output_parts.extend(["", "", ""])
 
     return output_parts, found
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Collect # TEXTS blocks from Python files.")
+    parser = argparse.ArgumentParser(
+        description="Collect text blocks from Python files and/or contents of TXT files."
+    )
     parser.add_argument(
         "folder",
         nargs="?",
-        default="Stuff",
-        help="Folder with .py files (default: Stuff)",
+        default=None,
+        help="Folder to scan (default: directory of this script)",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["both", "py", "txt"],
+        default="both",
+        help="What to extract (default: both)",
     )
     args = parser.parse_args()
 
-    folder = Path(args.folder).resolve()
+    folder = Path(args.folder).resolve() if args.folder else Path(__file__).resolve().parent
     if not folder.is_dir():
         raise SystemExit(f"Folder does not exist: {folder}")
 
-    lines, found = extract_texts(folder)
-    output_file = folder / "texts.txt"
-    output_text = "\n".join(lines).rstrip() + "\n"
-    output_file.write_text(output_text, encoding="utf-8")
+    py_output_name = "texts.txt"
+    txt_output_name = "texts_from_txt_files.txt"
 
-    print(f"Saved {found} section(s) to {output_file}")
+    if args.mode in ("both", "py"):
+        lines, found = extract_texts(folder)
+        output_file = folder / py_output_name
+        output_text = "\n".join(lines)
+        output_file.write_text(output_text, encoding="utf-8")
+        print(f"Saved {found} Python section(s) to {output_file}")
+
+    if args.mode in ("both", "txt"):
+        txt_lines, txt_found = extract_txt_files(folder, {py_output_name, txt_output_name})
+        txt_output_file = folder / txt_output_name
+        txt_output_text = "\n".join(txt_lines)
+        txt_output_file.write_text(txt_output_text, encoding="utf-8")
+        print(f"Saved {txt_found} TXT file(s) to {txt_output_file}")
 
 
 if __name__ == "__main__":

@@ -34,7 +34,7 @@ bonusNotGained = f"Protože jste neodpověděl(a) správně na všechny kontroln
 intro = "Označte, do jaké míry souhlasíte s následujícímí tvrzeními, na poskytnuté škále."
 
 uppsIntro = """Přečtěte si prosím každé tvrzení a označte, nakolik s ním souhlasíte."""
-samsIntro = """Všechny následující položky se vztahují k otázce: "Proč se vzděláváte?" Ohodnoťte, do jaké míry nakolik každá položka odpovídá Vaší situaci."""
+samsIntro = """Všechny následující položky se vztahují k otázce: <b>"Proč se vzděláváte?"</b> Ohodnoťte, do jaké míry nakolik každá položka odpovídá Vaší situaci."""
 sciIntro1 = "<b>Když se zamyslíte nad typickou nocí v posledním měsíci…</b>"
 sciIntro2 = "\nKdyž se zamyslíte nad uplynulým měsícem, do jaké míry špatný spánek"
 sciIntro3 = "\nNakonec…"

@@ -23,14 +23,14 @@ Nyní si nasaďte sluchátka a kliknutím na tlačítko "Test zvuku" ozkoušejte
 <b>Poté, co ozkoušíte, že zvuk funguje, klikněte na tlačítko "Pokračovat".</b>"""
 
 
-videoinstructions = """Celkem budete sledovat osm videí ve dvou modulech. Ke každému videu je navázáno pět otázek v kvízu, který budete vyplňovat po zhlédnutí videí a vyplnění dotazníků. Celkem tedy bude v kvízu 40 otázek. Kvíz bude obsahovat otázky z každého videa, ale otázky nebudou rozděleny podle videí, takže nebudete vědět, které otázky se vztahují k jakému videu. Za každou správnou odpověď v kvízu získáte 5 Kč. Celkem tedy můžete získat až 200 Kč za správné odpovědi v kvízu.
+videoinstructions = """Celkem budete sledovat osm videí ve dvou modulech. Ke každému videu je navázáno pět otázek v kvízu, který budete vyplňovat před koncem studie, tedy po zhlédnutí videí a vyplnění dotazníků. Celkem tedy bude v kvízu 40 otázek. Kvíz bude obsahovat otázky z každého videa, ale otázky nebudou rozděleny podle videí, takže nebudete vědět, které otázky se vztahují k jakému videu. Za každou správnou odpověď v kvízu získáte 5 Kč. Celkem tedy můžete získat až 200 Kč za správné odpovědi v kvízu.
 
-Videa budou zobrazena na levé straně obrazovky. Během sledování videa se může na pravé straně obrazovky objevit sekundární panel s různým obsahem. Obsahu tohoto panelu se nemusíte všímat a nijak se nevztahuje k obsahu videí. Nijak také neovlivní Vaši odměnu a nevztahují se k němu žédné další části studie.
+Videa budou zobrazena na levé straně obrazovky. Během sledování videa se může na pravé straně obrazovky objevit sekundární panel s různým obsahem. <b>Obsahu tohoto panelu se nemusíte všímat a nijak se nevztahuje k obsahu kvízu. Nijak tedy neovlivní Vaši odměnu a nevztahují se k němu žádné další části studie.</b>
 
 Klikněte na tlačítko "Pokračovat"."""
 
 
-startvideos = """Nyní přejdeme k prvnímu modulu naší studie. Tato část se skládá ze 4 videí, která se zaměřují na téma stresu a psychologické odolnosti.
+startvideos = """Nyní přejdeme k prvnímu modulu naší studie. Tato část se skládá ze 4 videí, která se zaměřují na téma <b>stresu a psychologické odolnosti</b>.
 
 Po zhlédnutí každého videa vás požádáme o dvě rychlé odpovědi týkající se vaší pozornosti.
 
@@ -41,7 +41,7 @@ Klikněte na tlačítko "Pokračovat" a video se spustí automaticky."""
 
 secondmoduleintro = """Skvělé, máte za sebou první polovinu videí!
 
-Nyní přejdeme ke druhému modulu, který obsahuje další 4 videa. Tato série se zaměřuje na téma, jak správně poskytovat a přijímat zpětnou vazbu.
+Nyní přejdeme ke druhému modulu, který obsahuje další 4 videa. Tato série se zaměřuje na téma, <b>jak správně poskytovat a přijímat zpětnou vazbu</b>.
 
 Stejně jako v předchozí části vás po každém videu poprosíme o krátké zhodnocení vaší pozornosti.
 
@@ -54,7 +54,7 @@ V kvízu bude celkem 40 otázek, které se budou týkat všech 8 videí, která 
 
 U každé otázky je vždy jedna správná odpověď.
 
-Připomínáme, že za každou správnou odpověď obdržíte dodatečnou finanční odměnu ve výši {QUIZ_BONUS} Kč."""
+Připomínáme, že <b>za každou správnou odpověď obdržíte dodatečnou finanční odměnu ve výši {QUIZ_BONUS} Kč.</b>"""
 
 ############################################################################
 

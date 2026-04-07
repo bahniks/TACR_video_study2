@@ -17,9 +17,9 @@ from login import Login
 ################################################################################
 # TEXTS intros
 
-intro = """Studie se skládá ze série 8 krátkých výukových videí, která se věnují zvládání stresu, psychologické odolnosti a poskytování zpětné vazby. 
+intro = """Studie se skládá ze série 8 krátkých <b>výukových videí, která se věnují zvládání stresu, psychologické odolnosti a poskytování zpětné vazby.</b>
 
-Důležité upozornění k formátu: Během sledování výukového videa (na levé straně obrazovky) se může na pravé straně obrazovky objevit sekundární panel s různým obsahem (např. krátká videa, chat nebo jednoduchá hra). 
+<b>Důležité upozornění k formátu:</b> Během sledování výukového videa (na levé straně obrazovky) se může na pravé straně obrazovky objevit sekundární panel s různým obsahem (např. krátká videa, chat nebo jednoduchá hra). 
 
 Kromě sledování videí budete vyplňovat několik dotazníků. Níže je uveden přehled toho, co Vás čeká:
 <b>1) Čtyři videa na téma stresu a psychické odolnosti:</b> po každém videu budete tázáni na vaši pozornost.
@@ -41,7 +41,7 @@ V závěrečném kvízu jste dosáhl(a) {} správných odpovědí z 40. Na zákl
 
 <b>Vaše odměna za tuto studii je dohromady {} Kč. Napište prosím tuto částku do příjmového dokladu na stole před Vámi.</b> 
 
-Studie založená na datech získaných v tomto experimentu bude volně dostupná na stránkách Centra laboratorního a experimentálního výzkumu FPH VŠE, krátce po vyhodnocení dat a publikaci výsledků. 
+Studie založená na datech získaných v tomto experimentu bude volně dostupná na stránkách Decision Lab Prague při FPH VŠE, krátce po vyhodnocení dat a publikaci výsledků. 
 
 Cílem studie bylo zjistit, jaký typ edukačního videa lidé preferují a jak jej hodnotí v různých parametrech oblíbenosti či náročnosti. Studie rovněž nabízela participantům různou velikost odměny - v závislosti do jaké podmínky byli náhodně zařazeni - za správné odpovědi, s cílem ověřit, jak preference participantů ovlivňuje velká či malá odměna.
 
@@ -51,7 +51,7 @@ Můžete si vzít všechny svoje věci a vyplněný příjmový doklad, a aniž 
 
 Toto je konec experimentu. Děkujeme za Vaši účast!
  
-Centrum laboratorního a experimentálního výzkumu FPH VŠE""" 
+Decision Lab Prague""" 
 
 
 

@@ -436,24 +436,29 @@ class Quiz(InstructionsAndUnderstanding):
             self.file.write("\n")
             InstructionsFrame.nextFun(self)   
         else:
-            self.createQuestion()     
-
+            self.createQuestion()
 
 
 def getQuestions(filename):
     with open(os.path.join(os.path.dirname(__file__), filename), "r", encoding = "utf-8") as f:
         questions = []        
         q = ["", [], ""]
+        temp = []
         count = 0
         for line in f:      
             if count == 0:
                 q[0] = line.strip().replace("\\n", "\n")
             elif count == 5:                    
+                q[1].extend(temp)
                 questions.append(q)
                 q = ["", [], ""]
+                temp = []
                 count = -1
             else:
-                q[1].append(line.strip())               
+                if line.startswith("*"):
+                    q[1].append(line.strip()[1:])
+                else:
+                    temp.append(line.strip())               
             count += 1
     questions.append(q)
     random.shuffle(questions)
@@ -466,4 +471,4 @@ Quiz = (Quiz, {"text": quizInstructions, "height": "auto", "name": "Quiz", "cont
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.getcwd()))
-    GUI([Login, Videos2, EndQuestionnaire, Quiz, Attention, Videos2, Videos])
+    GUI([Login, Quiz, EndQuestionnaire, Attention, Videos2, EndQuestionnaire, Quiz, Attention, Videos2, Videos])
