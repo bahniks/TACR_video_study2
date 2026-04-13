@@ -43,7 +43,7 @@ frames = [Initial,
           SAMS,
           Mindset,
           QuizIntroduction,
-          Quiz, # upravit formatovani delky odpovedi
+          Quiz,
           Postdiction,
           Demographics,
           Comments,

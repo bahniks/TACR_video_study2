@@ -69,7 +69,7 @@ class Login(InstructionsFrame):
 
     def write(self):
         self.file.write("Login" + "\n")
-        self.file.write(self.id + self.root.status["condition"] + "\t" + "\t".join(self.root.status["distractions"]) + "\n\n")        
+        self.file.write(self.id + "\t" + self.root.status["condition"] + "\t" + "\t".join(self.root.status["distractions"]) + "\n\n")        
 
     def gothrough(self):
         self.run()

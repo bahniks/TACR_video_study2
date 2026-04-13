@@ -197,7 +197,7 @@ class IfThenPlanChooser(InstructionsFrame):
         self.result_placeholder = Frame(self.result_frame, background="white", height=1)
         self.result_placeholder.pack(fill=X, expand=True)
         
-        self.file.write("Když-tak plán (výběr)\n")
+        self.file.write("Boost plan choice\n")
     
     def confirm_plan(self):
         """Confirm the plan selection."""
@@ -231,6 +231,8 @@ class IfThenPlanChooser(InstructionsFrame):
         """Auto-select the first options and confirm for testing purposes."""
         self.when_combo.current(random.randint(0, len(when_options) - 1))
         self.then_combo.current(random.randint(0, len(then_options) - 1))
+        self.update()
+        self.confirm_plan()
         self.update()
         self.next.invoke()
 
