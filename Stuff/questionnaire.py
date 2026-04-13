@@ -13,7 +13,7 @@ import os
 
 from common import ExperimentFrame, InstructionsFrame, Question, Measure, read_all
 from gui import GUI
-from constants import ATTENTION_BONUS, BONUS, TESTING, AUTOFILL
+from constants import ATTENTION_BONUS, TESTING, AUTOFILL
 
 
 ################################################################################
@@ -23,18 +23,20 @@ questintro = f"""V následující části studie budete odpovídat na otázky o 
 
 Každou otázku si pečlivě přečtěte. Snažte se však na otázky nemyslet příliš dlouho; první odpověď, která Vám přijde na mysl, je obvykle nejlepší.
 
-Mezi dotazníky bude jedna položka měřící Vaší pozornost, pokud odpovíte správně, dostanete dodatečných {ATTENTION_BONUS} Kč."""
+V této a další částech studie jsou dvě položky měřící Vaší pozornost, pokud odpovíte správně, dostanete dodatečných {ATTENTION_BONUS} Kč za každou položku."""
 
 attentiontext = "Chcete-li prokázat, že zadání věnujete pozornost, vyberte možnost "
 
-bonusGained = f"Protože jste odpověděl(a) správně na všechny kontrolní otázky, získáváte dalších {BONUS} Kč."
-bonusNotGained = f"Protože jste neodpověděl(a) správně na všechny kontrolní otázky, nezískáváte dalších {BONUS} Kč."
+bonusGained = "Protože jste odpověděl(a) správně na {}, získáváte dalších {} Kč."
+bonusNotGained = "Protože jste neodpověděl(a) správně na vžádnou kontrolní otázku, nezískáváte žádnou další odměnu."
+oneCheck = "jednu kontrolní otázku"
+twoChecks = "obě kontrolní otázky"
 
-
-intro = "Označte, do jaké míry souhlasíte s následujícímí tvrzeními, na poskytnuté škále."
+intro = "Označte, do jaké míry souhlasíte s následujícími tvrzeními, na poskytnuté škále."
 
 uppsIntro = """Přečtěte si prosím každé tvrzení a označte, nakolik s ním souhlasíte."""
-samsIntro = """Všechny následující položky se vztahují k otázce: <b>"Proč se vzděláváte?"</b> Ohodnoťte, do jaké míry nakolik každá položka odpovídá Vaší situaci."""
+samsIntro = """Všechny následující položky se vztahují k otázce: <b>"Proč se vzděláváte?"</b>
+Ohodnoťte, do jaké míry nakolik každá položka odpovídá Vaší situaci."""
 sciIntro1 = "<b>Když se zamyslíte nad typickou nocí v posledním měsíci…</b>"
 sciIntro2 = "\nKdyž se zamyslíte nad uplynulým měsícem, do jaké míry špatný spánek"
 sciIntro3 = "\nNakonec…"
@@ -260,10 +262,10 @@ class MeasureQuestionnaire(InstructionsFrame):
         self.next.invoke()
 
 
-class BlockQuestionnaire(ExperimentFrame):
+class BlockQuestionnaire(InstructionsFrame):
     def __init__(self, root, perpage, file, name, left, right, options = 5, shuffle = True,
-                 instructions = "", height = 3, width = 80, center = False, checks = 0, wraplength = "auto"):
-        super().__init__(root)
+                 instructions = "", height = 3, width = 80, center = False, checks = 0, endChecks = False, wraplength = "auto"):
+        super().__init__(root, text = instructions, proceed = False, height = height, width = width)
 
         self.perpage = perpage
         self.left = left
@@ -271,18 +273,16 @@ class BlockQuestionnaire(ExperimentFrame):
         self.options = options
         self.checks = checks != 0
         self.checksNumber = checks
+        self.endChecks = endChecks
         self.name = name
         self.wraplength = wraplength
 
         self.file.write("{}\n".format(name))
 
-        if instructions:
-            self.instructions = Text(self, height = height, relief = "flat", width = width, font = "helvetica 15", wrap = "word")
-            self.instructions.grid(row = 1, column = 0, columnspan = 3)
-            self.instructions.insert("1.0", instructions, "text")
-            if center:
-                self.instructions.tag_config("text", justify = "center") 
-            self.instructions["state"] = "disabled"
+        if center:
+            self.text.config(state = "normal")
+            self.text.tag_add("center", "1.0", "end")
+            self.text.config(state = "disabled")
 
         self.questions = [i for i in read_all(file, comments = True).split("\n")]
         # with open(os.path.join("Stuff", file), encoding = "utf-8") as f:
@@ -293,8 +293,11 @@ class BlockQuestionnaire(ExperimentFrame):
             random.shuffle(self.questions)
 
         if checks:
-            spread = len(self.questions)//checks
-            positions = [random.randint(self.perpage//2 + spread*i, spread*(i+1) - self.perpage//2) for i in range(checks)]
+            if checks > 1:
+                spread = len(self.questions)//checks
+                positions = [random.randint(self.perpage//2 + spread*i, spread*(i+1) - self.perpage//2) for i in range(checks)]                
+            else:
+                positions = [random.randint(2, len(self.questions))]
             for i in range(checks):
                 self.questions.insert(positions[i], attentiontext + str(random.randint(1, options)) + ".")
 
@@ -304,6 +307,8 @@ class BlockQuestionnaire(ExperimentFrame):
 
         self.rowconfigure(0, weight = 1)
         self.rowconfigure(1, weight = 2)
+        for i in range(2, self.perpage*2 + 4):
+            self.rowconfigure(i, weight = 0)
         self.rowconfigure(self.perpage*2 + 4, weight = 1)
         self.rowconfigure(self.perpage*2 + 5, weight = 3)
         self.columnconfigure(0, weight = 1)
@@ -331,13 +336,13 @@ class BlockQuestionnaire(ExperimentFrame):
             measure.grid_forget()
         if self.mnumber == len(self.questions):
             self.file.write("\n")
-            if self.checks:
+            if self.endChecks:
                 self.file.write("Attention checks\n")
                 correct_checks = str(self.root.status["attention_checks"])
                 self.file.write(self.id + "\t" + self.name + "\t" + correct_checks + "\n\n")
-                if correct_checks == str(self.checksNumber):
-                    self.root.status["results"] += [bonusGained]
-                    self.root.status["reward"] += BONUS                    
+                if int(correct_checks) > 0:
+                    self.root.status["results"] += [bonusGained.format(oneCheck if self.checksNumber == 1 else twoChecks, self.checksNumber * ATTENTION_BONUS)]
+                    self.root.status["reward"] += self.checksNumber * ATTENTION_BONUS
                 else:
                     self.root.status["results"] += [bonusNotGained]
             self.destroy()
@@ -408,9 +413,6 @@ class Likert(Canvas):
         self.columnconfigure(0, weight = 1)
         self.columnconfigure(options + 1, weight = 1)
         self.rowconfigure(0, weight = 1)
-
-        if False: #TESTING:
-            self.answer.set(str(random.randint(1, options)))
 
 
     def write(self):
@@ -488,7 +490,7 @@ UPPS = (Questionnaire,
                     "pady": 5})
 
 SAMS = (BlockQuestionnaire,
-                {"perpage": 7,
+                {"perpage": 8,
                     "file": "sams.txt",
                     "name": "SAMS",
                     "left": "Vůbec neodpovídá",
@@ -496,10 +498,12 @@ SAMS = (BlockQuestionnaire,
                     "options": 7,
                     "shuffle": True,
                     "instructions": samsIntro,
-                    "wraplength": 900}) 
+                    "wraplength": 900,
+                    "checks": 1,
+                    'center': True}) 
 
 Mindset = (BlockQuestionnaire,
-                {"perpage": 3,
+                {"perpage": 4,
                     "file": "mindset.txt",
                     "name": "Mindset",
                     "left": "silně nesouhlasím",
@@ -507,7 +511,10 @@ Mindset = (BlockQuestionnaire,
                     "options": 6,
                     "shuffle": True,
                     "instructions": mindsetIntro,
-                    "wraplength": 800})
+                    "wraplength": 800,
+                    "checks": 1,
+                    "endChecks": True,
+                    "center": True})
 
 
 # class Hexaco(BlockQuestionnaire):
@@ -522,4 +529,4 @@ QuestInstructions = (InstructionsFrame, {"text": questintro, "height": 15})
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.getcwd()))
-    GUI([SCI, QuestInstructions, Mindset, UPPS, SAMS])
+    GUI([SAMS, QuestInstructions, Mindset, UPPS, SAMS, SCI])

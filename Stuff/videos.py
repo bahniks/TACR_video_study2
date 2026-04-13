@@ -12,60 +12,52 @@ from common import ExperimentFrame, Measure, InstructionsFrame, InstructionsAndU
 from questionnaire import Questionnaire
 from gui import GUI
 from login import Login
-from constants import LIMIT, TESTING
+from constants import TESTING
 from chat import Chat
 from tiktok import TikTok
 from game import Game
 
-from constants import QUIZ_BONUS
+from constants import QUIZ_BONUS, POSTDICTION_BONUS
 from questionnaire import MeasureQuestionnaire
 
 
 
 ############################################################################
 # TEXTS videos
-
-imiInstructions = """Nyní Vás prosíme o hodnocení zhlédnutého videa. 
-U každého z následujících tvrzení uveďte, nakolik je pro vás pravdivé."""
-
-imiInstructions2 = """Skvělé! Dokončili jste všech 5 videí. Můžete si sundat sluchátka, nebudete je již potřebovat.
-
-Nyní Vás prosíme o hodnocení této série videí.
-U každého z následujících tvrzení uveďte, nakolik je pro vás pravdivé.
-"""
-
-imiScale = ["zcela nepravdivé", "spíše nepravdivé", "do jisté míry pravdivé", "spíše pravdivé", "zcela pravdivé"]
-
-
 attInstructions = """Zhodnoťte svou pozornost během právě zhlédnutého videa. 
 U každé otázky vyberte na uvedené škále možnost, která nejlépe odpovídá Vaší zkušenosti."""
 
 attQ1 = "Jak moc jste se soustředili na výukové video během jeho přehrávání?"
-attQ2 = "Do jaké míry vaše pozornost odbíhala od videa?"
+attQ2 = "Do jaké míry Vaše pozornost odbíhala od videa?"
 
 attScale = ["vůbec ne", "trochu", "středně", "hodně", "velmi hodně"]
 attQuestions = [attQ1, attQ2]
 
-endQ1 = "Celkově, jak dobře se vám dařilo udržet pozornost na výukových videích?"
-endQ2 = "Jak často vaše pozornost odbíhala od výukových videí?"
+endQ1 = "Celkově, jak dobře se Vám dařilo udržet pozornost na výukových videích?"
+endQ2 = "Jak často Vaše pozornost odbíhala od výukových videí?"
 endQ3 = "Jak často jste se úmyslně snažili vrátit svou pozornost zpět poté, co jste si všimli, že jste nesoustředění?"
 endQ4 = "Použili jste nějakou záměrnou strategii, která vám pomohla udržet pozornost?"
-endQ5 = "Jak užitečná pro vás tato strategie byla?"
+endQ5 = "Jak užitečná pro Vás tato strategie byla?"
 endQ6 = "Stručně ji prosím popište."
 
 endScale1 = ["velmi špatně", "špatně", "středně", "dobře", "velmi dobře"]
 endScale2 = ["vůbec", "zřídka", "někdy", "často", "velmi často"]
 endScale3 = ["vůbec nebyla užitečná", "spíše nebyla užitečná", "byla do jisté míry užitečná", "spíše byla užitečná", "byla velmi užitečná"]
 
-
 quizInstructions = f"""U každé otázky je vždy jedna správná odpověď.
 
 Připomínáme, že za každou správnou odpověď obdržíte dodatečnou finanční odměnu ve výši {QUIZ_BONUS} Kč."""
 
+quizReward = "V závěrečném kvízu jste dosáhl(a) {} správných odpovědí z 40. Na základě výsledků v závěrečném kvízu získáváte tedy navíc {} Kč."
 
 endInstructions = """Výborně, máte za sebou sledování všech výukových videí! 
-Než přistoupíme k dotazníkům a závěrečnému kvízu, rádi bychom vás požádali o celkové zhodnocení toho, jak se vám během celého předchozího úkolu dařilo udržet pozornost a zda jste při tom využívali nějaké záměrné strategie.
+Než přistoupíme k dotazníkům a závěrečnému kvízu, rádi bychom Vás požádali o celkové zhodnocení toho, jak se Vám během celého předchozího úkolu dařilo udržet pozornost a zda jste při tom využívali nějaké záměrné strategie.
 Odpovídejte prosím co nejupřímněji podle toho, jak jste situaci celkově vnímali."""
+
+postdiction = """Odhadněte, kolik otázek v závěrečném kvízu jste zodpověděli správně. Odpověď uveďte jako celé číslo od 0 do 40. Pokud se Váš odhad nebude lišit více než o jednu otázku od skutečného počtu správných odpovědí, získáte dodatečnou odměnu ve výši {} Kč.""".format(POSTDICTION_BONUS)
+
+postdictionCorrect = """Váš odhad počtu správných odpovědí v kvízu byl správný, získáváte tedy dodatečnou odměnu ve výši {} Kč.""".format(POSTDICTION_BONUS)
+postdictionIncorrect = """Váš odhad počtu správných odpovědí v kvízu se lišil o více než jednu otázku od skutečného počtu správných odpovědí, bohužel tedy nezískáváte dodatečnou odměnu."""
 
 ############################################################################
 
@@ -203,14 +195,14 @@ class Videos2(ExperimentFrame):
         ttk.Style().map("Overlay.TCheckbutton", background=[("active", "white"), ("selected", "white")])
         self.overlay_toggle = ttk.Checkbutton(
             self,
-            text="Šedý filtr vpravo",
+            text="Vypnout režim soustředění",
             variable=self.overlay_enabled,
             command=self.toggle_right_overlay,
             style="Overlay.TCheckbutton",
             takefocus=False,
         )
         self.overlay_toggle.bind("<FocusIn>", lambda event: self.canvas2.focus_set())
-        if self.root.status.get("condition") == "nudge":
+        if self.root.status.get("condition") == "nudge" and self.content_type != "control":
             self.overlay_toggle.grid(row=2, column=2, padx=5)
             self.overlay_enabled.set(True)
             self.toggle_right_overlay()
@@ -220,6 +212,7 @@ class Videos2(ExperimentFrame):
     def on_video_end(self, event):
         """Callback for when main video ends."""
         self.video_ended = True
+        self.right_content.stop()
         self.next["state"] = "normal"
 
     def stop(self):
@@ -231,6 +224,11 @@ class Videos2(ExperimentFrame):
         self.right_content.stop()
         self.root.status["videoNumber"] += 1
         self.nextFun()
+
+    def gothrough(self):
+        self.player.stop()
+        self.right_content.stop()
+        self.next.invoke()
 
     def _on_right_canvas_configure(self, event):
         if self.overlay_enabled.get():
@@ -274,10 +272,12 @@ class Videos2(ExperimentFrame):
     def toggle_right_overlay(self):
         if self.overlay_enabled.get():
             self._position_right_overlay_window()
+            self.overlay_toggle["text"] = "Vypnout režim soustředění"
             if self.overlay_refresh_job is None:
                 self.overlay_refresh_job = self.after(120, self._refresh_right_overlay)
         else:
             self._destroy_right_overlay_window()
+            self.overlay_toggle["text"] = "Zapnout režim soustředění"
             if self.overlay_refresh_job is not None:
                 self.after_cancel(self.overlay_refresh_job)
                 self.overlay_refresh_job = None
@@ -298,6 +298,70 @@ class Attention(MeasureQuestionnaire):
         trial = self.root.status["videoNumber"] - 1
         self.file.write("Attention\n")
         self.file.write(self.id + "\t" + str(trial) + "\t" + self.measure1.answer.get() + "\t" + self.measure2.answer.get() + "\n\n")
+
+
+class Postdiction(InstructionsFrame):
+    def __init__(self, root):
+        super().__init__(root, text=postdiction, proceed=True, savedata=True, height="auto")
+
+        self.answer_var = StringVar()
+        self.answer_var.trace_add("write", lambda *_: self._update_next_state())
+
+        vcmd = (self.register(self._validate_postdiction_input), "%P")
+        self.answer_entry = ttk.Entry(self, textvariable=self.answer_var, width=8, justify="center", validate="key", validatecommand=vcmd, font=("helvetica", 15))
+        self.answer_entry.grid(row=2, column=1, pady=8)
+        self.label = ttk.Label(self, text="správných odpovědí", font=("helvetica", 15), background="white")
+        self.label.grid(row=2, column=2, padx=8, sticky="w")
+
+        self.next.grid(row=3, column=0, columnspan=4)
+        self.next["state"] = "disabled"
+
+        self.rowconfigure(0, weight=4)
+        self.rowconfigure(4, weight=3)
+
+    def _validate_postdiction_input(self, proposed):
+        if proposed == "":
+            return True
+        if not proposed.isdigit():
+            return False
+        return int(proposed) <= 40
+
+    def _update_next_state(self):
+        self.next["state"] = "normal" if self.check() else "disabled"
+
+    def check(self):
+        value = self.answer_var.get()
+        if not value or not value.isdigit():
+            return False
+        number = int(value)
+        return 0 <= number <= 40
+
+    def write(self):
+        if abs(int(self.answer_var.get()) - self.root.status.get("quizcorrect", 0)) <= 1:
+            self.root.status["reward"] += POSTDICTION_BONUS
+            self.root.status["results"] += [postdictionCorrect]
+        else:
+            self.root.status["results"] += [postdictionIncorrect]
+
+        self.file.write("Postdiction\n")
+        self.file.write(f"{self.id}\t{self.answer_var.get()}\t{self.root.status['quizcorrect']}\n\n")
+
+    def gothrough(self):
+        value = str(random.randint(0, 40))
+
+        self.answer_entry.focus_set()
+        self.update()
+
+        for char in value:
+            self.answer_entry.event_generate(f"<KeyPress-{char}>")
+            self.answer_entry.event_generate(f"<KeyRelease-{char}>")
+            self.update()
+            sleep(0.05)
+
+        self.update()
+        sleep(0.3)
+        self.next.invoke()
+        
 
 
 class EndQuestionnaire(InstructionsFrame):
@@ -427,6 +491,7 @@ class Quiz(InstructionsAndUnderstanding):
             thisCorrect = "1"
             self.correct += 1
             self.root.status["quizwin"] += QUIZ_BONUS
+            self.root.status["quizcorrect"] = self.root.status.get("quizcorrect", 0) + 1
         else:
             thisCorrect = "0"
             
@@ -434,6 +499,8 @@ class Quiz(InstructionsAndUnderstanding):
 
         if self.controlNum == len(self.controlTexts):
             self.file.write("\n")
+            self.root.status["reward"] += self.root.status["quizwin"]
+            self.root.status["results"] += [quizReward.format(self.correct, self.root.status["quizwin"])]
             InstructionsFrame.nextFun(self)   
         else:
             self.createQuestion()
@@ -460,6 +527,8 @@ def getQuestions(filename):
                 else:
                     temp.append(line.strip())               
             count += 1
+        if temp:
+            q[1].extend(temp)     
     questions.append(q)
     random.shuffle(questions)
     return questions
@@ -471,4 +540,4 @@ Quiz = (Quiz, {"text": quizInstructions, "height": "auto", "name": "Quiz", "cont
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.getcwd()))
-    GUI([Login, Quiz, EndQuestionnaire, Attention, Videos2, EndQuestionnaire, Quiz, Attention, Videos2, Videos])
+    GUI([Quiz, Login, Postdiction, Quiz, EndQuestionnaire, Attention, Videos2, EndQuestionnaire, Quiz, Attention, Videos2, Videos])

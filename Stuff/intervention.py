@@ -3,7 +3,9 @@
 
 from tkinter import *
 from tkinter import ttk
+from time import sleep
 import os
+import random
 
 from common import ExperimentFrame, InstructionsAndUnderstanding, InstructionsFrame
 from gui import GUI
@@ -13,11 +15,11 @@ from videos import Videos
 ############################################################################
 # TEXTS intervention
 
-nudgeinstructions = """Během sledování videi bude vedlejší panel překryt poloprůhledným šedým závojem, který indikuje, že je aktivní <b>"Režim soustředění"</b>. Tento režim se automaticky zapne na začátku každého videa. 
+nudgeinstructions = """Během sledování videí bude vedlejší panel překryt poloprůhledným šedým závojem, který indikuje, že je aktivní <b>"Režim soustředění"</b>. Tento režim se automaticky zapne na začátku každého videa. 
 
 Režim soustředění můžete kdykoliv libovolně vypnout nebo zapnout pomocí přepínacího tlačítka na obrazovce."""
 
-boostinstructions = """Nyní se podíváte na krátké video o strategii, kterou můžete použít během následujících videi, aby Vám pomohla lépe se soustředit na učení. Prosíme, poslouchejte pozorně — hned poté budete odpovídat na několik krátkých otázek."""
+boostinstructions = """Nyní se podíváte na krátké video o strategii, kterou můžete použít během následujících videí, aby Vám pomohla lépe se soustředit na učení. Prosíme, poslouchejte pozorně — hned poté budete odpovídat na několik krátkých otázek."""
 
 boostunderstanding = """Nyní zodpovíte několik krátkých otázek k právě zhlédnutému videu. Vyberte vždy jednu správnou odpověď, která nejlépe odpovídá tomu, co bylo ve videu vysvětleno. Po úspěšném zodpovězení otázek budete pokračovat k vytvoření vlastního "když-tak plánu"."""
 
@@ -29,7 +31,8 @@ control_questions = [
             "Plán, který propojuje konkrétní signál rozptýlení s konkrétní akcí, kterou provedete.",
             "Připomínka, že rozptýlení škodí učení."
         ],
-        ["Ne", "Ano", "Ne"]
+        ["Špatná odpověď. Správná odpověď je: „Plán, který propojuje konkrétní signál rozptýlení s konkrétní akcí, kterou provedete.“ Ve videu zaznělo, že „když-tak plán“ neslibuje, že zůstanete soustředění bez přerušení. Naopak vychází z toho, že kolísání pozornosti je normální, a pomáhá Vám rychle rozpoznat rozptýlení a vrátit se k učení.", "Správná odpověď. Ve videu zaznělo, že „když-tak plán“ neslibuje, že zůstanete soustředění bez přerušení. Naopak vychází z toho, že kolísání pozornosti je normální, a pomáhá Vám rychle rozpoznat rozptýlení a vrátit se k učení.", 
+"Špatná odpověď. Správná odpověď je: „Plán, který propojuje konkrétní signál rozptýlení s konkrétní akcí, kterou provedete.“ Ve videu zaznělo, že „když-tak plán“ neslibuje, že zůstanete soustředění bez přerušení. Naopak vychází z toho, že kolísání pozornosti je normální, a pomáhá Vám rychle rozpoznat rozptýlení a vrátit se k učení."]
     ],
     [
         'Co je část "KDYŽ" v implementačním záměru?',
@@ -38,7 +41,9 @@ control_questions = [
             "Konkrétní signál nebo okamžik, který Vám napoví, že Vaše pozornost začíná kolísat.",
             "Shrnutí vzdělávacího videa."
         ],
-        ["Ne", "Ano", "Ne"]
+        ["Špatná odpověď. Správná odpověď je: „Konkrétní signál nebo okamžik, který Vám napoví, že Vaše pozornost začíná kolísat.“ Ve videu bylo vysvětleno, že část „KDYŽ“ je okamžik, kterého si můžete snadno všimnout, když Vaše pozornost začíná odcházet od učení. Může jít například o chvíli, kdy si uvědomíte, že se díváte jinam nebo že už výklad sledujete jen pasivně.", 
+"Správná odpověď. Ve videu bylo vysvětleno, že část „KDYŽ“ je okamžik, kterého si můžete snadno všimnout, když Vaše pozornost začíná odcházet od učení. Může jít například o chvíli, kdy si uvědomíte, že se díváte jinam nebo že už výklad sledujete jen pasivně.", 
+"Špatná odpověď. Správná odpověď je: „Konkrétní signál nebo okamžik, který Vám napoví, že Vaše pozornost začíná kolísat.“ Ve videu bylo vysvětleno, že část „KDYŽ“ je okamžik, kterého si můžete snadno všimnout, když Vaše pozornost začíná odcházet od učení. Může jít například o chvíli, kdy si uvědomíte, že se díváte jinam nebo že už výklad sledujete jen pasivně."]
     ],
     [
         'Co je část "TAK" v implementačním záměru?',
@@ -47,7 +52,9 @@ control_questions = [
             "Konkrétní reakce, kterou můžete okamžitě použít k návratu k učení.",
             "Důvod, proč je digitální prostředí rozptylující."
         ],
-        ["Ne", "Ano", "Ne"]
+        ["Špatná odpověď. Správná odpověď je: „Konkrétní reakce, kterou můžete okamžitě použít k návratu k učení.“ Ve videu zaznělo, že část „TAK“ je krátká a konkrétní akce, kterou provedete hned, jakmile si všimnete rozptýlení. Právě tato reakce Vám má pomoci rychle se vrátit k obsahu a znovu zaměřit pozornost na učení.", 
+"Správná odpověď. Ve videu zaznělo, že část „TAK“ je krátká a konkrétní akce, kterou provedete hned, jakmile si všimnete rozptýlení. Právě tato reakce Vám má pomoci rychle se vrátit k obsahu a znovu zaměřit pozornost na učení.", 
+"Špatná odpověď. Správná odpověď je: „Konkrétní reakce, kterou můžete okamžitě použít k návratu k učení.“ Ve videu zaznělo, že část „TAK“ je krátká a konkrétní akce, kterou provedete hned, jakmile si všimnete rozptýlení. Právě tato reakce Vám má pomoci rychle se vrátit k obsahu a znovu zaměřit pozornost na učení."]
     ],
     [
         "Který plán je silnější?",
@@ -56,7 +63,9 @@ control_questions = [
             "Když si všimnu, že jsem rozptýlený/á, znovu se zaměřím a shrnu poslední myšlenku.",
             "Když bude video obtížné, budu se snažit dávat pozor ještě víc než obvykle."
         ],
-        ["Ne", "Ano", "Ne"]
+        ["Špatná odpověď. Správná odpověď je: „Když si všimnu, že jsem rozptýlený/á, znovu se zaměřím a shrnu poslední myšlenku.“ Ve videu bylo zdůrazněno, že silnější plán obsahuje jasný signál rozptýlení a konkrétní reakci, která Vás vrátí zpět k učení. Nejde tedy jen o obecnou snahu dávat větší pozor, ale o předem připravený krok, který lze hned použít.", 
+"Správná odpověď. Ve videu bylo zdůrazněno, že silnější plán obsahuje jasný signál rozptýlení a konkrétní reakci, která Vás vrátí zpět k učení. Nejde tedy jen o obecnou snahu dávat větší pozor, ale o předem připravený krok, který lze hned použít.", 
+"Špatná odpověď. Správná odpověď je: „Když si všimnu, že jsem rozptýlený/á, znovu se zaměřím a shrnu poslední myšlenku.“ Ve videu bylo zdůrazněno, že silnější plán obsahuje jasný signál rozptýlení a konkrétní reakci, která Vás vrátí zpět k učení. Nejde tedy jen o obecnou snahu dávat větší pozor, ale o předem připravený krok, který lze hned použít."]
     ],
     [
         'Která reakce "TAK" je lepší?',
@@ -65,7 +74,9 @@ control_questions = [
             "…tak si připomenu svůj cíl a znovu si řeknu poslední klíčový bod.",
             "…tak budu doufat, že si zapamatuji, co bylo právě řečeno."
         ],
-        ["Ne", "Ano", "Ne"]
+        ["Špatná odpověď. Správná odpověď je: „… Tak si připomenu svůj cíl a znovu si řeknu poslední klíčový bod.“ Ve videu bylo vysvětleno, že lepší reakce „TAK“ je konkrétní, krátká a snadno proveditelná během několika sekund.", 
+"Správná odpověď. Ve videu bylo vysvětleno, že lepší reakce „TAK“ je konkrétní, krátká a snadno proveditelná během několika sekund.", 
+"Špatná odpověď. Správná odpověď je: „… Tak si připomenu svůj cíl a znovu si řeknu poslední klíčový bod.“ Ve videu bylo vysvětleno, že lepší reakce „TAK“ je konkrétní, krátká a snadno proveditelná během několika sekund."]
     ]
 ]
 
@@ -99,6 +110,7 @@ class Intervention(ExperimentFrame):
         self.root = root
         
         condition = self.root.status["condition"]
+        condition = "boost"
         
         if condition == "control":
             # Immediately proceed to next frame
@@ -109,15 +121,21 @@ class Intervention(ExperimentFrame):
             self.after(100, self.nextFun)
         elif condition == "boost":
             # Insert dedicated boost video step
-            self.root.order.insert(self.root.count + 1, BoostVideo)
-            self.root.order.insert(self.root.count + 2, BoostUnderstandingCheck)
-            self.root.order.insert(self.root.count + 3, IfThenPlanChooser)
+            self.root.order.insert(self.root.count + 1, BoostInstructions)
+            self.root.order.insert(self.root.count + 2, BoostVideo)
+            self.root.order.insert(self.root.count + 3, BoostUnderstandingCheck)
+            self.root.order.insert(self.root.count + 4, IfThenPlanChooser)
             self.after(100, self.nextFun)
 
 
 class NudgeInstructions(InstructionsFrame):
     def __init__(self, root):
         super().__init__(root, text=nudgeinstructions, height="auto", font=15)
+
+
+class BoostInstructions(InstructionsFrame):
+    def __init__(self, root):
+        super().__init__(root, text=boostinstructions, height="auto", font=15)
 
 
 class IfThenPlanChooser(InstructionsFrame):
@@ -209,6 +227,13 @@ class IfThenPlanChooser(InstructionsFrame):
         # Log to file
         self.file.write(self.id + "\t" + full_plan + "\n\n")
 
+    def gothrough(self):
+        """Auto-select the first options and confirm for testing purposes."""
+        self.when_combo.current(random.randint(0, len(when_options) - 1))
+        self.then_combo.current(random.randint(0, len(then_options) - 1))
+        self.update()
+        self.next.invoke()
+
 
 class BoostVideo(Videos):
     """Dedicated boost video frame that always plays boost.mp4."""
@@ -219,6 +244,10 @@ class BoostVideo(Videos):
         self.player.stop()
         self.nextFun()
 
+    def gothrough(self):
+        self.stop()
+        return super().gothrough()
+
 
 BoostUnderstandingCheck = (InstructionsAndUnderstanding,
                            {"text": boostunderstanding,
@@ -227,7 +256,7 @@ BoostUnderstandingCheck = (InstructionsAndUnderstanding,
                             "showFeedback": True,
                             "randomize": False,
                             "height": "auto",
-                            "fillerHeight": 120})
+                            "fillerHeight": 300})
 
 
 if __name__ == "__main__":

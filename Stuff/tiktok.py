@@ -24,23 +24,15 @@ class TikTok:
         self.player2 = None
         self.running = True
 
-        if self.distraction_videos:
-            self.instance2 = vlc.Instance('--vout=direct3d9')
-            self.player2 = self.instance2.media_player_new()
-            self.player2.set_hwnd(self.canvas.winfo_id())
+        self.instance2 = vlc.Instance('--vout=direct3d9')
+        self.player2 = self.instance2.media_player_new()
+        self.player2.set_hwnd(self.canvas.winfo_id())
 
-            self.event_manager2 = self.player2.event_manager()
-            self.event_manager2.event_attach(vlc.EventType.MediaPlayerEndReached, self.on_distraction_video_end)
+        self.event_manager2 = self.player2.event_manager()
+        self.event_manager2.event_attach(vlc.EventType.MediaPlayerEndReached, self.on_distraction_video_end)
 
-            self.play_next_distraction_video()
-        else:
-            self.canvas.create_text(
-                self.width // 2,
-                self.height // 2,
-                text="No distraction videos found",
-                font=("Helvetica", 16),
-                fill="white"
-            )
+        self.play_next_distraction_video()
+
 
     def on_distraction_video_end(self, event):
         if not self.running:
@@ -70,16 +62,7 @@ class TikTok:
 
     def get_distraction_videos(self):
         distractions_path = os.path.join(os.getcwd(), "Stuff", "Distractions")
-        if not os.path.exists(distractions_path):
-            return []
-
-        video_extensions = ['.mp4', '.mkv', '.avi', '.mov', '.flv', '.wmv']
-        videos = [
-            f for f in os.listdir(distractions_path)
-            if os.path.isfile(os.path.join(distractions_path, f))
-            and os.path.splitext(f)[1].lower() in video_extensions
-        ]
-
+        videos = [f for f in os.listdir(distractions_path)]
         full_paths = [os.path.join(distractions_path, v) for v in videos]
         random.shuffle(full_paths)
         return full_paths

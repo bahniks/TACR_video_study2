@@ -12,6 +12,10 @@ from gui import GUI
 
 
 class Chat:
+    _used_chat_files = set()
+    _used_nicknames = set()
+    _nickname_counter = 1
+
     # Configuration parameters
     CONFIG = {
         # Timing (in milliseconds)
@@ -74,8 +78,9 @@ class Chat:
         self.scrollbar = ttk.Scrollbar(self.canvas, orient="vertical", command=self.canvas.yview)
         self.scrollbar_visible = False
 
-        self.messages = self.load_random_chat_messages()
         self.speaker_nicknames = self.sample_speaker_nicknames()
+        self.current_chat_file = None
+        self.messages = []
         self.current_message_index = 0
         self.playing = False
         self.next_message_job = None
@@ -84,6 +89,8 @@ class Chat:
 
         self.canvas.bind("<Configure>", self.on_canvas_configure)
         self.messages_frame.bind("<Configure>", self.on_messages_configure)
+
+        self.load_next_chat_messages()
 
     def stop(self):
         self.playing = False
@@ -103,27 +110,53 @@ class Chat:
 
     def sample_speaker_nicknames(self):
         nicknames = [
-            "PixelFox", "NightOwl", "BlueComet", "EchoWave", "NovaByte", "MangoCat",
-            "CloudRider", "LimeSpark", "VelvetMoon", "RedPanda", "OrbitKid", "SilverLeaf",
-            "TinyGolem", "UrbanKoala", "NeonWolf", "SunnyCoder", "DustyRocket", "QuietStorm"
+            "Klara_23", "BrnoVibe", "NocniSova", "Anezka", "Vltava", "CodeMacek",
+            "Lucie", "BuchtaDev", "Tyna", "Nela.exe", "Zuzka.cz", "PrahaVibe",
+            "TetaScript", "RanniKafe", "KavarnaMood", "ModraTuha", "LiskaPixel", "MestskyVitr",
+            "Svetylko", "ByteBeruska", "VercaLoop", "LenkaCloud", "Kvetinac", "NoraNode"
         ]
-        sampled = random.sample(nicknames, self.CONFIG["num_speakers"])
+
+        available = [name for name in nicknames if name not in Chat._used_nicknames]
+        sampled = random.sample(available, min(len(available), self.CONFIG["num_speakers"]))
+        while len(sampled) < self.CONFIG["num_speakers"]:
+            generated = f"Uzivatelka{Chat._nickname_counter}"
+            Chat._nickname_counter += 1
+            if generated not in Chat._used_nicknames:
+                sampled.append(generated)
+
+        Chat._used_nicknames.update(sampled)
         return {"s1": sampled[0], "s2": sampled[1]}
 
-    def load_random_chat_messages(self):
+    def _available_chat_files(self):
         chats_path = os.path.join(os.getcwd(), "Stuff", "Chats")
         if not os.path.exists(chats_path):
-            return []
+            return chats_path, []
 
         chat_files = [
             f for f in os.listdir(chats_path)
             if os.path.isfile(os.path.join(chats_path, f)) and f.lower().endswith(".txt")
         ]
+        return chats_path, chat_files
+
+    def _select_next_chat_file(self):
+        chats_path, chat_files = self._available_chat_files()
         if not chat_files:
+            return None
+
+        unused_files = [f for f in chat_files if f not in Chat._used_chat_files]
+        if not unused_files:
+            return None
+
+        selected_file = random.choice(unused_files)
+        Chat._used_chat_files.add(selected_file)
+        return os.path.join(chats_path, selected_file)
+
+    def load_next_chat_messages(self):
+        selected_path = self._select_next_chat_file()
+        if selected_path is None:
             return []
 
-        selected_file = random.choice(chat_files)
-        selected_path = os.path.join(chats_path, selected_file)
+        self.current_chat_file = selected_path
 
         parsed_messages = []
         with open(selected_path, "r", encoding="utf-8") as f:
@@ -134,6 +167,9 @@ class Chat:
                 parsed = self.parse_message_line(line)
                 if parsed:
                     parsed_messages.append(parsed)
+
+        self.messages = parsed_messages
+        self.current_message_index = 0
         return parsed_messages
 
     def parse_message_line(self, line):
@@ -159,6 +195,13 @@ class Chat:
     def schedule_next_message(self, initial=False):
         if not self.playing:
             return
+
+        if self.current_message_index >= len(self.messages):
+            if not self.load_next_chat_messages():
+                self.playing = False
+                return
+            initial = True
+
         if self.current_message_index >= len(self.messages):
             return
 
@@ -169,6 +212,10 @@ class Chat:
         self.next_message_job = None
 
         if not self.playing or self.current_message_index >= len(self.messages):
+            return
+
+        if self.current_message_index == 0:
+            self.show_next_message()
             return
 
         speaker_id, side, _ = self.messages[self.current_message_index]

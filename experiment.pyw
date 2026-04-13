@@ -13,13 +13,13 @@ from demo import Demographics
 from comments import Comments
 from login import Login
 from videointros import Sound, VideoIntro, StartVideos, SecondModuleIntro, QuizIntroduction
-from videos import Videos, Attention, Quiz, EndQuestionnaire, Videos2
+from videos import Videos, Attention, Quiz, EndQuestionnaire, Videos2, Postdiction
 from questionnaire import UPPS, SCI, SAMS, Mindset, QuestInstructions
 from intervention import Intervention
 
 
     
-
+# TODO ukladani dat vsude
 frames = [Initial,
           Login, 
           Intro,             
@@ -37,14 +37,14 @@ frames = [Initial,
           Videos2, Attention,
           Videos2, Attention,
           EndQuestionnaire,
-          QuestInstructions, # pridat attention checky
+          QuestInstructions,
           UPPS,
           SCI,
           SAMS,
           Mindset,
           QuizIntroduction,
-          Quiz,
-          # Postdiction
+          Quiz, # upravit formatovani delky odpovedi
+          Postdiction,
           Demographics,
           Comments,
           Ending

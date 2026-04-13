@@ -10,7 +10,7 @@ import vlc
 
 from common import InstructionsFrame
 from gui import GUI
-from constants import LIMIT, TESTING, QUIZ_BONUS
+from constants import TESTING, QUIZ_BONUS
 from login import Login
 
 ############################################################################
@@ -32,7 +32,7 @@ Klikněte na tlačítko "Pokračovat"."""
 
 startvideos = """Nyní přejdeme k prvnímu modulu naší studie. Tato část se skládá ze 4 videí, která se zaměřují na téma <b>stresu a psychologické odolnosti</b>.
 
-Po zhlédnutí každého videa vás požádáme o dvě rychlé odpovědi týkající se vaší pozornosti.
+Po zhlédnutí každého videa Vás požádáme o dvě rychlé odpovědi týkající se Vaší pozornosti.
 
 Pokud nemáte nasazená sluchátka, nasaďte je nyní, abyste mohli sledovat videa se zvukem.
 
@@ -43,7 +43,7 @@ secondmoduleintro = """Skvělé, máte za sebou první polovinu videí!
 
 Nyní přejdeme ke druhému modulu, který obsahuje další 4 videa. Tato série se zaměřuje na téma, <b>jak správně poskytovat a přijímat zpětnou vazbu</b>.
 
-Stejně jako v předchozí části vás po každém videu poprosíme o krátké zhodnocení vaší pozornosti.
+Stejně jako v předchozí části Vás po každém videu poprosíme o krátké zhodnocení Vaší pozornosti.
 
 Klikněte na tlačítko "Pokračovat" a video se spustí automaticky."""
 

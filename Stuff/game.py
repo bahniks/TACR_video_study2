@@ -94,6 +94,9 @@ class Game:
 
         self.restart_seconds_remaining = None
         self.restart_show_start = False
+        self.start_seconds_remaining = None
+        self.start_show_start = False
+        self.start_job = None
 
         self.score = 0
 
@@ -109,6 +112,9 @@ class Game:
         if self.restart_job is not None:
             self.canvas.after_cancel(self.restart_job)
             self.restart_job = None
+        if self.start_job is not None:
+            self.canvas.after_cancel(self.start_job)
+            self.start_job = None
         self.canvas.unbind_all("<Left>")
         self.canvas.unbind_all("<Right>")
         self.canvas.unbind_all("<Down>")
@@ -116,14 +122,48 @@ class Game:
         self.canvas.unbind_all("<space>")
 
     def play(self):
-        if self.running or self.game_over:
+        if self.running or self.game_over or self.start_seconds_remaining is not None or self.start_show_start:
             return
-        self.running = True
         self.canvas.bind_all("<Left>", lambda event: self._move(-1, 0))
         self.canvas.bind_all("<Right>", lambda event: self._move(1, 0))
         self.canvas.bind_all("<Down>", lambda event: self._move(0, 1))
         self.canvas.bind_all("<Up>", lambda event: self._rotate())
         self.canvas.bind_all("<space>", lambda event: self._hard_drop())
+        self._start_game_countdown()
+
+    def _start_game_countdown(self):
+        if self.start_job is not None:
+            return
+        self.running = False
+        self.start_seconds_remaining = 3
+        self.start_show_start = False
+        self._draw()
+        self.start_job = self.canvas.after(1000, self._game_countdown_step)
+
+    def _game_countdown_step(self):
+        self.start_job = None
+        if self.game_over or self.start_seconds_remaining is None:
+            return
+
+        if self.start_seconds_remaining > 1:
+            self.start_seconds_remaining -= 1
+            self._draw()
+            self.start_job = self.canvas.after(1000, self._game_countdown_step)
+            return
+
+        if self.start_seconds_remaining == 1:
+            self.start_seconds_remaining = 0
+            self.start_show_start = True
+            self._draw()
+            self.start_job = self.canvas.after(800, self._begin_game_loop)
+
+    def _begin_game_loop(self):
+        self.start_job = None
+        if self.game_over:
+            return
+        self.start_seconds_remaining = None
+        self.start_show_start = False
+        self.running = True
         self._tick()
 
     def _shape_cells(self, piece_type=None, rotation=None):
@@ -309,7 +349,7 @@ class Game:
                 if cell is not None:
                     self._draw_block(col, row, self.colors[cell])
 
-        if not self.game_over and self.current_piece is not None:
+        if not self.game_over and self.current_piece is not None and self.start_seconds_remaining is None and not self.start_show_start:
             for dx, dy in self._shape_cells():
                 self._draw_block(self.current_x + dx, self.current_y + dy, self.colors[self.current_piece])
 
@@ -391,6 +431,28 @@ class Game:
                 )
                 self.canvas.tag_raise(text_id, bg_id)
 
+        if not self.game_over and (self.start_show_start or self.start_seconds_remaining is not None):
+            self.canvas.create_rectangle(
+                self.offset_x,
+                self.offset_y + self.board_height // 2 - 36,
+                self.offset_x + self.board_width,
+                self.offset_y + self.board_height // 2 + 36,
+                fill="#000000",
+                outline=""
+            )
+            if self.start_show_start:
+                start_text = "START"
+            else:
+                start_text = str(self.start_seconds_remaining)
+
+            self.canvas.create_text(
+                self.offset_x + self.board_width // 2,
+                self.offset_y + self.board_height // 2,
+                text=start_text,
+                font=("Helvetica", 28, "bold"),
+                fill="#4dff91"
+            )
+
     def _recalculate_layout(self):
         horizontal_padding = max(8, int(self.width * 0.04))
         top_info_space = max(24, int(self.height * 0.1))
@@ -428,10 +490,10 @@ class GameTest(ExperimentFrame):
     def __init__(self, root):
         super().__init__(root)
 
-        canvas = Canvas(self, width=600, height=337, background="white", highlightbackground="white", highlightcolor="white")
+        canvas = Canvas(self, width=600, height=800, background="white", highlightbackground="white", highlightcolor="white")
         canvas.grid(row=0, column=0)
 
-        self.game = Game(canvas, width=600, height=337)
+        self.game = Game(canvas, width=600, height=800)
         self.game.play()
 
     def stop(self):

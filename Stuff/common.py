@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import ttk
+import tkinter.font as tkfont
 from time import time, sleep, perf_counter
 
 import os
@@ -512,8 +513,11 @@ class MultipleChoice(Canvas):
         self.order = [i for i in range(len(answers))]
         if randomize:
             random.shuffle(self.order)
+        answer_font = tkfont.Font(family="helvetica", size=15)
+        max_answer_width_px = 900
         for i in range(len(answers)):            
-            self.radios.append(ttk.Radiobutton(self, text = answers[self.order[i]], value = i + 1,
+            wrapped_answer = self._wrap_text_to_width(answers[self.order[i]], answer_font, max_answer_width_px)
+            self.radios.append(ttk.Radiobutton(self, text = wrapped_answer, value = i + 1,
                                                command = self.answerFunction, variable = self.answer))
             self.radios[i].grid(row = i+ 1, column = 0, pady = 3, sticky = W)
 
@@ -524,6 +528,24 @@ class MultipleChoice(Canvas):
                                           font = "helvetica 15", wraplength = 950)
         self.feedback.grid(column = 0, row = len(answers) + 1, pady = 5, sticky = NW)
         self.rowconfigure(len(answers) + 1, weight = 1)
+
+    @staticmethod
+    def _wrap_text_to_width(text, font, max_width_px):
+        words = text.split()
+        if not words:
+            return text
+
+        lines = []
+        current = words[0]
+        for word in words[1:]:
+            candidate = current + " " + word
+            if font.measure(candidate) <= max_width_px:
+                current = candidate
+            else:
+                lines.append(current)
+                current = word
+        lines.append(current)
+        return "\n".join(lines)
 
     def getAnswer(self):
         return self.answers[self.order[int(self.answer.get()) - 1]].replace("\n", "  ").replace("\t", " ") 
@@ -556,11 +578,13 @@ class InstructionsAndUnderstanding(InstructionsFrame):
 
         self.controlFrame = Canvas(self, background = "white", highlightbackground = "white",
                                  highlightcolor = "white")
-        self.filler2 = Canvas(self.controlFrame, background = "white", width = 1, height = fillerHeight,
-                                highlightbackground = "white", highlightcolor = "white")
-        self.filler2.grid(column = 1, row = 0, rowspan = 10, sticky = NS)
+        self.controlFrame.grid_propagate(False)
 
-        self.controlFrame.grid(row = 2, column = 1)
+        self.control_frame_width, self.control_frame_height = self._measure_max_control_area()
+        self.control_frame_height = max(self.control_frame_height, fillerHeight)
+        self.controlFrame.configure(width = self.control_frame_width, height = self.control_frame_height)
+
+        self.controlFrame.grid(row = 2, column = 1, sticky = W)
         self.next.grid(row = 3, column = 1)
 
         self.controlNum = 0
@@ -576,6 +600,28 @@ class InstructionsAndUnderstanding(InstructionsFrame):
         self.controlQuestion.grid(row = 0, column = 0)
         self.controlNum += 1
         self.controlstate = "answer"
+
+    def _measure_max_control_area(self):
+        max_width = 1
+        max_height = 1
+
+        for texts in self.controlTexts:
+            probe = MultipleChoice(self.controlFrame, text = texts[0], answers = texts[1], feedback = texts[2], randomize = False)
+            probe.grid(row = 99, column = 0)
+            self.update_idletasks()
+
+            max_width = max(max_width, probe.winfo_reqwidth())
+            max_height = max(max_height, probe.winfo_reqheight())
+
+            for fb_text in texts[2]:
+                probe.feedback["text"] = fb_text
+                self.update_idletasks()
+                max_width = max(max_width, probe.winfo_reqwidth())
+                max_height = max(max_height, probe.winfo_reqheight())
+
+            probe.destroy()
+
+        return max_width, max_height
         
     def nextFun(self):        
         if self.controlstate == "feedback" or not self.showFeedback:

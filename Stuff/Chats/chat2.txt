@@ -1,5 +1,5 @@
-S1: Tak co, někdo se ti dneska ozval?
-S2: Jo, můj budík. Z týmu nikdo.
+﻿S1: Tak co, někdo se ti dneska ozval?
+S2: můj budík. Z týmu nikdo.
 
 S1: To je konzistentní.
 S2: Konzistence je jediná věc, kterou tenhle tým má.
@@ -7,8 +7,8 @@ S2: Konzistence je jediná věc, kterou tenhle tým má.
 S1: Máme odevzdat za čtyři dny.
 S2: To je ještě dost času na to, aby se nikdo neozval.
 
-S1: Přesně, panika přijde až poslední noc.
-S2: A s ní zpráva „hele já jsem byl celý týden hrozně busy“.
+S1: panika přijde až poslední noc.
+S2: A s ní zpráva „hele já jsem byla celý týden hrozně busy“.
 
 S1: Já jsem dneska znovu psala do skupiny.
 S2: A výsledek?
@@ -16,7 +16,7 @@ S2: A výsledek?
 S1: Zobrazeno.
 S2: To je takový ten digitální oční kontakt bez emocí.
 
-S1: Přesně, dívají se na mě a pomalu zavírají dveře.
+S1: dívají se na mě a pomalu zavírají dveře.
 S2: Filip minule psal, že „se na to chystá“.
 
 S1: On se chystá už třetí semestr.
@@ -28,16 +28,16 @@ S2: Kolik toho máš hotového?
 S1: Teorii a půl prezentace. Dělala jsem to včera místo spánku.
 S2: Takže klasická týmová spolupráce.
 
-S1: Ano, tým jsem já a moje úzkost.
-S2: Já jsem začal psát metodologii.
+S1: tým jsem já a moje úzkost.
+S2: Já jsem začala psát metodologii.
 
 S1: Začal jako „otevřel dokument“, nebo fakt psát?
-S2: Napsal jsem nadpis. Pak jsem se šel psychicky připravit.
+S2: Napsala jsem nadpis. Pak jsem se šla psychicky připravit.
 
 S1: To je pořád víc než zbytek týmu dohromady.
-S2: Myslíš, že ví, jaké máme téma?
+S2: že ví, jaké máme téma?
 
-S1: Myslím, že vědí, že mají nějaký předmět.
+S1: že vědí, že mají nějaký předmět.
 S2: Ambiciózní.
 
 S1: A i to je možná přehnaný optimismus.
@@ -49,11 +49,11 @@ S2: To muselo zabrat hodně času nahrát.
 S1: Ironie je mrtvá a my jsme ji zabili.
 S2: Měli bychom jim napsat, že už to skoro máme hotové.
 
-S1: Ne, pak se najednou všichni zaktivují.
-S2: Pravda, to je spouštěč.
+S1: pak se najednou všichni zaktivují.
+S2: to je spouštěč.
 
 S1: Jakmile ucítí hotový projekt, objeví se jako supi.
-S2: „Ahoj, s čím můžu pomoct?“
+S2: „S čím můžu pomoct?“
 
 S1: Vždycky tahle věta.
 S2: V momentě, kdy už není s čím.
@@ -67,10 +67,10 @@ S2: Nikdy ho neudělal, ale zato ho slíbil třem lidem.
 S1: To je talent, který se cení. Přemýšlela jsem, že bych jim dala fakt jednoduchý úkol.
 S2: Třeba „napiš jednu větu“.
 
-S1: Ano, ale i to je risk.
+S1: ale i to je risk.
 S2: Mohli by napsat špatnou.
 
-S1: Víš, co je nejhorší?
+S1: co je nejhorší?
 S2: Že se na konci podepíšou všichni.
 
 S1: Přesně. A ještě napíšou „super práce, týme“.
@@ -79,7 +79,7 @@ S2: To mě fyzicky bolí.
 S1: Já už to beru jako sólo projekt s divným obsazením.
 S2: Já jako feat.
 
-S1: Přesně, „S1 ft. S2“.
+S1: „S1 ft. S2“.
 S2: A zbytek týmu jako skrytý bonusový track.
 S2: Co když se fakt nikdo neozve až do deadlinu?
 
@@ -90,7 +90,7 @@ S1: A omluvy, které nic neřeší.
 S2: Já mám pocit, že se studenti dělí na dvě skupiny.
 
 S1: Jaké?
-S2: Ty, co dělají projekt, a ty, co se k němu emocionálně vztahují.
+S2: co dělají projekt, a ty, co se k němu emocionálně vztahují.
 
 S1: A my jsme bohužel ti první.
 S1: Už vidím, jak to odevzdáme.
@@ -99,31 +99,31 @@ S2: A učitel řekne „dobrá týmová práce“.
 S1: To je největší plot twist.
 S2: Akademická komedie.
 
-S1: Hele, píšu jim poslední zprávu.
+S1: píšu jim poslední zprávu.
 S2: Dramatické.
 
-S1: „Ahoj, projekt už děláme, ozvěte se, pokud chcete pomoct.“
+S1: „Projekt už děláme, ozvěte se, pokud chcete pomoct.“
 S2: To je diplomatická verze „je pozdě“.
 
 S1: Vsadíme se, že se ozvou až zítra večer?
 S2: Já tipuju 23:47.
 
-S1: S větou „sorry, byl jsem celý den pryč“.
+S1: S větou „sorry, byla jsem celý den pryč“.
 S2: Vždycky byli pryč.
 
 S1: Víš co, hlavně ať je to hotové.
-S2: Jo, známky mají paměť krátkou.
+S2: známky mají paměť krátkou.
 
 S1: Zato my dlouhou.
 S2: Příští semestr si vybírám tým podle aktivity v chatu.
 
-S1: Já podle rychlosti odpovědi na „ahoj“.
+S1: Já podle rychlosti odpovědi na zprávu.
 S2: Pokud víc než hodina, konec.
 
-S1: Dobře, jdu dodělat prezentaci.
+S1: jdu dodělat prezentaci.
 S2: Já dopíšu text a budu předstírat, že je to normální.
 
-S1: Díky, že aspoň ty funguješ.
+S1: že aspoň ty funguješ.
 S2: Není zač, jsme v tom spolu.
 
 S1: Kdyby se někdo ozval, co napíšeme?
@@ -132,8 +132,8 @@ S2: „Díky, už je hotovo.“
 S1: Bez smajlíku.
 S2: Bez emocí.
 
-S1: Víš, že se tohle stane znovu.
-S2: Ano, a zase budeme překvapení.
+S1: že se tohle stane znovu.
+S2: a zase budeme překvapení.
 
 S1: Studenti se nikdy nepoučí.
 S2: Ale projekty se nějak odevzdají.
@@ -145,3 +145,4 @@ S1: Jako vždycky.
 S2: Aspoň že to umíme.
 
 S1: Bohužel.
+S2: njn
