@@ -173,6 +173,8 @@ class Chat:
         return parsed_messages
 
     def parse_message_line(self, line):
+        # Some chat files may start with UTF-8 BOM, which would break speaker prefix matching.
+        line = line.lstrip("\ufeff")
         pattern = r"^\s*(S1|S2|Speaker\s*1|Speaker\s*2|Speaker1|Speaker2)\s*:\s*(.*)$"
         match = re.match(pattern, line, flags=re.IGNORECASE)
         if not match:

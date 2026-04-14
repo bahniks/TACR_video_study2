@@ -4,14 +4,20 @@ from tkinter import *
 
 import os
 import random
+from time import time
 
 from common import ExperimentFrame
 from gui import GUI
 
 
 class Game:
-    def __init__(self, canvas, width=600, height=337):
+    def __init__(self, canvas, width=600, height=337, owner=None):
         self.canvas = canvas
+        self.owner = owner
+        self.file = getattr(owner, "file", None)
+        self.id = getattr(owner, "id", "")
+        if not self.id and owner is not None:
+            self.id = getattr(getattr(owner, "root", None), "id", "")
         self.width = width
         self.height = height
         self.canvas.configure(width=self.width, height=self.height)
@@ -28,6 +34,13 @@ class Game:
         self.score_x = 0
         self.speed_x = 0
         self.controls_y = 0
+
+        self.data = []
+        self.gameData = {}
+        self.data_written = False
+        self.game_number = 0
+        self.game_active = False
+        self.last_keypress_time = None
 
         self.canvas.bind("<Configure>", self.on_canvas_resize)
 
@@ -105,6 +118,8 @@ class Game:
         self._draw()
 
     def stop(self):
+        self._finalize_current_run()
+        self._write_data()
         self.running = False
         if self.loop_job is not None:
             self.canvas.after_cancel(self.loop_job)
@@ -124,11 +139,11 @@ class Game:
     def play(self):
         if self.running or self.game_over or self.start_seconds_remaining is not None or self.start_show_start:
             return
-        self.canvas.bind_all("<Left>", lambda event: self._move(-1, 0))
-        self.canvas.bind_all("<Right>", lambda event: self._move(1, 0))
-        self.canvas.bind_all("<Down>", lambda event: self._move(0, 1))
-        self.canvas.bind_all("<Up>", lambda event: self._rotate())
-        self.canvas.bind_all("<space>", lambda event: self._hard_drop())
+        self.canvas.bind_all("<Left>", self._on_left_key)
+        self.canvas.bind_all("<Right>", self._on_right_key)
+        self.canvas.bind_all("<Down>", self._on_down_key)
+        self.canvas.bind_all("<Up>", self._on_up_key)
+        self.canvas.bind_all("<space>", self._on_space_key)
         self._start_game_countdown()
 
     def _start_game_countdown(self):
@@ -163,8 +178,101 @@ class Game:
             return
         self.start_seconds_remaining = None
         self.start_show_start = False
+        self._start_new_run()
         self.running = True
         self._tick()
+
+    def _start_new_run(self):
+        video_number = ""
+        if self.owner is not None:
+            status = getattr(getattr(self.owner, "root", None), "status", None)
+            if status is not None:
+                video_number = status.get("videoNumber", "")
+
+        self.game_number += 1
+        self.gameData = {
+            "game_number": self.game_number,
+            "video_number": video_number,
+            "pressed_keys": 0,
+            "maximum_time_between_keys": 0.0,
+            "score_start": self.score,
+            "score_end": self.score,
+            "start_time": time(),
+            "end_time": None,
+        }
+        self.game_active = True
+        self.last_keypress_time = None
+
+    def _finalize_current_run(self):
+        if not self.game_active:
+            return
+
+        self.gameData["end_time"] = time()
+        self.gameData["score_end"] = self.score
+        self.data.append(dict(self.gameData))
+        self.gameData = {}
+        self.game_active = False
+        self.last_keypress_time = None
+
+    def _register_keypress(self):
+        if not self.game_active:
+            return
+
+        now = time()
+        self.gameData["pressed_keys"] += 1
+        if self.last_keypress_time is not None:
+            delta = now - self.last_keypress_time
+            if delta > self.gameData["maximum_time_between_keys"]:
+                self.gameData["maximum_time_between_keys"] = delta
+        self.last_keypress_time = now
+
+    def _on_left_key(self, event):
+        self._register_keypress()
+        self._move(-1, 0)
+
+    def _on_right_key(self, event):
+        self._register_keypress()
+        self._move(1, 0)
+
+    def _on_down_key(self, event):
+        self._register_keypress()
+        self._move(0, 1)
+
+    def _on_up_key(self, event):
+        self._register_keypress()
+        self._rotate()
+
+    def _on_space_key(self, event):
+        self._register_keypress()
+        self._hard_drop()
+
+    def _write_data(self):
+        if self.data_written or not self.data:
+            return
+
+        file_obj = self.file
+        if file_obj is None and self.owner is not None:
+            file_obj = getattr(getattr(self.owner, "root", None), "file", None)
+        if file_obj is None:
+            return
+
+        game_label = self.id if self.id else ""
+        file_obj.write("Game\n")
+        for run in self.data:
+            file_obj.write(
+                "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                    game_label,
+                    run["game_number"],
+                    run.get("video_number", ""),
+                    run["pressed_keys"],
+                    run["maximum_time_between_keys"],
+                    run["score_end"],
+                    run["start_time"],
+                    run["end_time"],
+                )
+            )
+        file_obj.write("\n")
+        self.data_written = True
 
     def _shape_cells(self, piece_type=None, rotation=None):
         if piece_type is None:
@@ -192,6 +300,7 @@ class Game:
         if not self._can_place(self.current_x, self.current_y):
             self.game_over = True
             self.running = False
+            self._finalize_current_run()
             self._start_restart_countdown()
 
     def _move(self, dx, dy):
@@ -305,6 +414,7 @@ class Game:
         self.cleared_lines_total = 0
         self.restart_seconds_remaining = None
         self.restart_show_start = False
+        self._start_new_run()
 
         self._spawn_piece()
         self._draw()
@@ -493,7 +603,7 @@ class GameTest(ExperimentFrame):
         canvas = Canvas(self, width=600, height=800, background="white", highlightbackground="white", highlightcolor="white")
         canvas.grid(row=0, column=0)
 
-        self.game = Game(canvas, width=600, height=800)
+        self.game = Game(canvas, width=600, height=800, owner=self)
         self.game.play()
 
     def stop(self):

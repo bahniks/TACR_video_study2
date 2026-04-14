@@ -187,7 +187,10 @@ class Videos2(ExperimentFrame):
             "game": Game,
             "control": Empty
         }
-        self.right_content = content_map[self.content_type](self.canvas2, width=400, height=850)
+        if self.content_type == "game":
+            self.right_content = content_map[self.content_type](self.canvas2, width=400, height=850, owner=self)
+        else:
+            self.right_content = content_map[self.content_type](self.canvas2, width=400, height=850)
         self.right_content.play()
 
         ttk.Style().configure("TButton", font="helvetica 15")
@@ -198,7 +201,7 @@ class Videos2(ExperimentFrame):
         ttk.Style().map("Overlay.TCheckbutton", background=[("active", "white"), ("selected", "white")])
         self.overlay_toggle = ttk.Checkbutton(
             self,
-            text="Vypnout režim soustředění",
+            text="Režim soustředění",
             variable=self.overlay_enabled,
             command=self.toggle_right_overlay,
             style="Overlay.TCheckbutton",
@@ -294,13 +297,11 @@ class Videos2(ExperimentFrame):
     def toggle_right_overlay(self):
         if self.overlay_enabled.get():
             self._position_right_overlay_window()
-            self.overlay_toggle["text"] = "Vypnout režim soustředění"
             if self.overlay_refresh_job is None:
                 self.overlay_refresh_job = self.after(120, self._refresh_right_overlay)
             self.focusToggle.append(perf_counter())
         else:
             self._destroy_right_overlay_window()
-            self.overlay_toggle["text"] = "Zapnout režim soustředění"
             if self.overlay_refresh_job is not None:
                 self.after_cancel(self.overlay_refresh_job)
                 self.overlay_refresh_job = None

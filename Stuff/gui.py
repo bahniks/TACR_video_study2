@@ -9,6 +9,7 @@ import urllib.request
 import urllib.parse
 import os
 import json
+import sys
 
 from constants import TESTING, URL, GOTHROUGH, PARTICIPATION_FEE
 from common import change_keyboard_layout
@@ -45,6 +46,7 @@ class GUI(Tk):
         self.bind("<Escape>", self.closeFun)
 
         self.order = frames
+        self._frame_aliases = self._build_frame_aliases()
 
         self.texts = defaultdict(str)        
         self.status = defaultdict(str)
@@ -123,8 +125,15 @@ class GUI(Tk):
                         "count": self.count}, 
                         f)
 
-        self.file.write("time: " + str(time()) + "\n")
         self.count += 1       
+        
+        if self.count < len(self.order):
+            frame_entry = self.order[self.count]
+            framename = self._frame_display_name(frame_entry)
+        else:
+            framename = "end"
+        self.file.write("time: " + str(time()) + f"\t{self.count}\t{framename}" + "\n")
+
         if self.count >= len(self.order):
             if not GOTHROUGH:
                 self.removeJson()
@@ -146,6 +155,24 @@ class GUI(Tk):
             elif hasattr(self.frame, "run"):
                 self.update()
                 self.frame.run()
+
+    def _build_frame_aliases(self):
+        aliases = {}
+        main_module = sys.modules.get("__main__")
+        if main_module is None:
+            return aliases
+
+        for name, value in vars(main_module).items():
+            if name.startswith("_"):
+                continue
+            if value in self.order:
+                aliases[id(value)] = name
+        return aliases
+
+    def _frame_display_name(self, frame_entry):
+        if isinstance(frame_entry, tuple):
+            return self._frame_aliases.get(id(frame_entry), frame_entry[0].__name__)
+        return frame_entry.__name__
 
 
     def closeFun(self, event = ""):

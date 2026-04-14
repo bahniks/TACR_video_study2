@@ -63,9 +63,9 @@ class Login(InstructionsFrame):
         self.root.status["videoNumber"] = 1
         self.root.status["distractions1"] = ["chat", "game", "tiktok", "control"]
         self.root.status["distractions2"] = ["chat", "game", "tiktok", "control"]
-        self.root.status["distractions"] = self.root.status["distractions1"] + self.root.status["distractions2"]
         random.shuffle(self.root.status["distractions1"])
-        random.shuffle(self.root.status["distractions2"])                     
+        random.shuffle(self.root.status["distractions2"])        
+        self.root.status["distractions"] = self.root.status["distractions1"] + self.root.status["distractions2"]             
 
     def write(self):
         self.file.write("Login" + "\n")

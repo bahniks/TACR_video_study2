@@ -225,7 +225,7 @@ class IfThenPlanChooser(InstructionsFrame):
         self.next.pack(pady=5)
         
         # Log to file
-        self.file.write(self.id + "\t" + full_plan + "\n\n")
+        self.file.write(self.id + "\t" + full_plan.replace("\n", "\t") + "\n\n")
 
     def gothrough(self):
         """Auto-select the first options and confirm for testing purposes."""
