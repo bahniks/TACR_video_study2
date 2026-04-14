@@ -2,7 +2,7 @@
 
 from tkinter import *
 from tkinter import ttk
-from time import sleep
+from time import sleep, perf_counter
 
 import os
 import vlc
@@ -140,6 +140,9 @@ class Videos2(ExperimentFrame):
         self.overlay_enabled = BooleanVar(value=False)
         self.overlay_refresh_job = None
         self.right_overlay_window = None
+        self.playback_cleanup_done = False
+        self.focusToggle = []
+        self.focusTime = 0
 
         # Create video canvas on the left
         self.canvas1 = Canvas(self, width=600, height=337, background="white", highlightbackground="white", highlightcolor="white")
@@ -206,28 +209,47 @@ class Videos2(ExperimentFrame):
             self.overlay_toggle.grid(row=2, column=2, padx=5)
             self.overlay_enabled.set(True)
             self.toggle_right_overlay()
+            self.focusToggle = [perf_counter()]
         if not TESTING:
             self.next["state"] = "disabled"
 
     def on_video_end(self, event):
         """Callback for when main video ends."""
+        self.after(0, self._handle_video_end)
+
+    def _handle_video_end(self):
         self.video_ended = True
-        self.right_content.stop()
+        self._cleanup_playback_state()
         self.next["state"] = "normal"
 
-    def stop(self):
+    def _cleanup_playback_state(self):
+        if self.playback_cleanup_done:
+            return
+
+        self.overlay_enabled.set(False)
+        self.overlay_toggle["state"] = "disabled"
         if self.overlay_refresh_job is not None:
             self.after_cancel(self.overlay_refresh_job)
             self.overlay_refresh_job = None
         self._destroy_right_overlay_window()
+        if self.root.status.get("condition") == "nudge" and self.content_type != "control":
+            self.focusToggle.append(perf_counter())
+            if len(self.focusToggle) % 2 == 1:                
+                self.focusTime += self.focusToggle[-1] - self.focusToggle[-2]
+            self.focusProportion = self.focusTime / (self.focusToggle[-1] - self.focusToggle[0])
+            self.file.write("Focus time\t{}\t{}\t{}\t{}\t{}\t{}\n\n".format(self.id, self.root.status["videoNumber"], self.content_type, self.focusTime, self.focusProportion, "|".join(map(str, self.focusToggle))))
         self.player.stop()
         self.right_content.stop()
+        self.playback_cleanup_done = True
+
+    def stop(self):
+        self._cleanup_playback_state()
         self.root.status["videoNumber"] += 1
         self.nextFun()
 
     def gothrough(self):
-        self.player.stop()
-        self.right_content.stop()
+        self.next["state"] = "normal"
+        sleep(0.5)
         self.next.invoke()
 
     def _on_right_canvas_configure(self, event):
@@ -275,12 +297,15 @@ class Videos2(ExperimentFrame):
             self.overlay_toggle["text"] = "Vypnout režim soustředění"
             if self.overlay_refresh_job is None:
                 self.overlay_refresh_job = self.after(120, self._refresh_right_overlay)
+            self.focusToggle.append(perf_counter())
         else:
             self._destroy_right_overlay_window()
             self.overlay_toggle["text"] = "Zapnout režim soustředění"
             if self.overlay_refresh_job is not None:
                 self.after_cancel(self.overlay_refresh_job)
                 self.overlay_refresh_job = None
+            self.focusToggle.append(perf_counter())
+            self.focusTime += self.focusToggle[-1] - self.focusToggle[-2]
 
     def getVideo(self):
         trial = self.root.status["videoNumber"]
