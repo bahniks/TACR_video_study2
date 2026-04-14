@@ -1,4 +1,4 @@
-﻿S1: Tak co, někdo se ti dneska ozval?
+﻿S1: Ozval se ti dneska někdo z týmu?
 S2: můj budík. Z týmu nikdo.
 
 S1: To je konzistentní.
