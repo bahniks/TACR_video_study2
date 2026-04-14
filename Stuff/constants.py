@@ -1,12 +1,11 @@
 PARTICIPATION_FEE = 145
 ATTENTION_BONUS = 10
 QUIZ_BONUS = 5
-#LIMIT = 24
 POSTDICTION_BONUS = 20
 
 AUTOFILL = True
 TESTING = True
-GOTHROUGH = False
+GOTHROUGH = True
 URL = "https://bahnik.pythonanywhere.com/"
-URL = "TEST"
+#URL = "TEST"
 #URL = "http://127.0.0.1:8000/"
