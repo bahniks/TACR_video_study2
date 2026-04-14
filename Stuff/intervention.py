@@ -110,7 +110,6 @@ class Intervention(ExperimentFrame):
         self.root = root
         
         condition = self.root.status["condition"]
-        condition = "boost"
         
         if condition == "control":
             # Immediately proceed to next frame

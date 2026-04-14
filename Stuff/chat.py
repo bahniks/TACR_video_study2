@@ -19,10 +19,11 @@ class Chat:
     # Configuration parameters
     CONFIG = {
         # Timing (in milliseconds)
-        "message_delay_min": 2500,
-        "message_delay_max": 8000,
+        "message_delay_min": 1500,
+        "message_delay_max": 3000,
         "typing_delay_min": 1000,
-        "typing_delay_max": 2200,
+        "typing_delay_max": 5500,
+        "typing_ms_per_character": 70,
         
         # UI dimensions
         "canvas_width": 600,
@@ -89,10 +90,13 @@ class Chat:
 
         self.canvas.bind("<Configure>", self.on_canvas_configure)
         self.messages_frame.bind("<Configure>", self.on_messages_configure)
+        self.canvas.bind("<Enter>", self._bind_mousewheel)
+        self.canvas.bind("<Leave>", self._unbind_mousewheel)
 
         self.load_next_chat_messages()
 
     def stop(self):
+        self._unbind_mousewheel()
         self.playing = False
         if self.next_message_job is not None:
             self.canvas.after_cancel(self.next_message_job)
@@ -106,7 +110,7 @@ class Chat:
         if self.playing:
             return
         self.playing = True
-        self.schedule_next_message(initial=True)
+        self.schedule_next_message()
 
     def sample_speaker_nicknames(self):
         nicknames = [
@@ -194,7 +198,7 @@ class Chat:
 
         return speaker_id, side, message_text
 
-    def schedule_next_message(self, initial=False):
+    def schedule_next_message(self):
         if not self.playing:
             return
 
@@ -202,12 +206,11 @@ class Chat:
             if not self.load_next_chat_messages():
                 self.playing = False
                 return
-            initial = True
 
         if self.current_message_index >= len(self.messages):
             return
 
-        delay_ms = 0 if initial else random.randint(self.CONFIG["message_delay_min"] // 1000, self.CONFIG["message_delay_max"] // 1000) * 1000
+        delay_ms = random.randint(self.CONFIG["message_delay_min"], self.CONFIG["message_delay_max"])
         self.next_message_job = self.canvas.after(delay_ms, self.show_typing_indicator)
 
     def show_typing_indicator(self):
@@ -216,16 +219,16 @@ class Chat:
         if not self.playing or self.current_message_index >= len(self.messages):
             return
 
-        if self.current_message_index == 0:
-            self.show_next_message()
-            return
-
-        speaker_id, side, _ = self.messages[self.current_message_index]
+        speaker_id, side, text = self.messages[self.current_message_index]
         nickname = self.speaker_nicknames[speaker_id]
         self.add_typing_indicator(side, nickname)
 
-        typing_delay_ms = random.randint(self.CONFIG["typing_delay_min"], self.CONFIG["typing_delay_max"])
+        typing_delay_ms = self._typing_delay_for_message(text)
         self.typing_job = self.canvas.after(typing_delay_ms, self.show_next_message)
+
+    def _typing_delay_for_message(self, text):
+        delay_ms = len(text) * self.CONFIG["typing_ms_per_character"]
+        return max(self.CONFIG["typing_delay_min"], min(delay_ms, self.CONFIG["typing_delay_max"]))
 
     def show_next_message(self):
         self.typing_job = None
@@ -360,6 +363,15 @@ class Chat:
     def _on_canvas_scroll(self, first, last):
         self.scrollbar.set(first, last)
 
+    def _bind_mousewheel(self, event=None):
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+    def _unbind_mousewheel(self, event=None):
+        self.canvas.unbind_all("<MouseWheel>")
+
+    def _on_mousewheel(self, event):
+        self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
 
 class ChatTest(ExperimentFrame):
     def __init__(self, root):
@@ -376,6 +388,9 @@ class ChatTest(ExperimentFrame):
 
     def stop(self):
         self.chat.stop()
+
+    def gothrough(self):
+        pass
 
 
 if __name__ == "__main__":

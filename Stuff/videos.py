@@ -145,11 +145,11 @@ class Videos2(ExperimentFrame):
         self.focusTime = 0
 
         # Create video canvas on the left
-        self.canvas1 = Canvas(self, width=600, height=337, background="white", highlightbackground="white", highlightcolor="white")
-        self.canvas1.grid(column=1, row=1, sticky=(N, S, E, W), padx=5)
+        self.canvas1 = Canvas(self, width=int(854*0.9), height=int(480*0.9), background="white", highlightbackground="white", highlightcolor="white")
+        self.canvas1.grid(column=1, row=1, sticky=(E, W), padx=5)
 
         # Create right-side content canvas
-        self.canvas2 = Canvas(self, width=600, height=337, background="black", highlightbackground="black", highlightcolor="black")
+        self.canvas2 = Canvas(self, width=480, height=854, background="white", highlightbackground="white", highlightcolor="white")
         self.canvas2.grid(column=2, row=1, sticky=(N, S, E, W), padx=5)
         self.canvas2.bind("<Configure>", self._on_right_canvas_configure)
 
@@ -188,9 +188,9 @@ class Videos2(ExperimentFrame):
             "control": Empty
         }
         if self.content_type == "game":
-            self.right_content = content_map[self.content_type](self.canvas2, width=400, height=850, owner=self)
+            self.right_content = content_map[self.content_type](self.canvas2, width=480, height=854, owner=self)
         else:
-            self.right_content = content_map[self.content_type](self.canvas2, width=400, height=850)
+            self.right_content = content_map[self.content_type](self.canvas2, width=480, height=854)
         self.right_content.play()
 
         ttk.Style().configure("TButton", font="helvetica 15")
@@ -237,7 +237,7 @@ class Videos2(ExperimentFrame):
         self._destroy_right_overlay_window()
         if self.root.status.get("condition") == "nudge" and self.content_type != "control":
             self.focusToggle.append(perf_counter())
-            if len(self.focusToggle) % 2 == 1:                
+            if len(self.focusToggle) % 2 == 0:                
                 self.focusTime += self.focusToggle[-1] - self.focusToggle[-2]
             self.focusProportion = self.focusTime / (self.focusToggle[-1] - self.focusToggle[0])
             self.file.write("Focus time\t{}\t{}\t{}\t{}\t{}\t{}\n\n".format(self.id, self.root.status["videoNumber"], self.content_type, self.focusTime, self.focusProportion, "|".join(map(str, self.focusToggle))))
@@ -265,8 +265,8 @@ class Videos2(ExperimentFrame):
 
         self.right_overlay_window = Toplevel(self)
         self.right_overlay_window.overrideredirect(True)
-        self.right_overlay_window.configure(background="#4F4F4F")
-        self.right_overlay_window.attributes("-alpha", 0.45)
+        self.right_overlay_window.configure(background="#3A3A3A")
+        self.right_overlay_window.attributes("-alpha", 0.6)
         self.right_overlay_window.transient(self.winfo_toplevel())
 
     def _refresh_right_overlay(self):
@@ -502,12 +502,24 @@ class Quiz(InstructionsAndUnderstanding):
 
         self.name = name
         self.correct = 0
+        self.question_counter = ttk.Label(self, text="", background="white", font=("helvetica", 15))
+        self.question_counter.grid(row=0, column=1, columnspan = 2, sticky=NE, padx=30, pady=30)
+        self._update_question_counter()
 
         self.rowconfigure(0, weight = 5)
         self.rowconfigure(1, weight = 1)
         self.rowconfigure(2, weight = 1) 
         self.rowconfigure(3, weight = 1)   
         self.rowconfigure(4, weight = 5)
+
+    def createQuestion(self):
+        super().createQuestion()
+        self._update_question_counter()
+
+    def _update_question_counter(self):
+        if not hasattr(self, "question_counter"):
+            return
+        self.question_counter["text"] = f"Otázka {self.controlNum}/{len(self.controlTexts)}"
 
     def nextFun(self):  
         if not "quizwin" in self.root.status:
@@ -566,4 +578,4 @@ Quiz = (Quiz, {"text": quizInstructions, "height": "auto", "name": "Quiz", "cont
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.getcwd()))
-    GUI([Quiz, Login, Postdiction, Quiz, EndQuestionnaire, Attention, Videos2, EndQuestionnaire, Quiz, Attention, Videos2, Videos])
+    GUI([Login, Videos2, Postdiction, Quiz, EndQuestionnaire, Attention, Videos2, EndQuestionnaire, Quiz, Attention, Videos2, Videos])
