@@ -7,6 +7,7 @@ from time import sleep
 import os
 import random
 
+from Stuff.constants import TESTING
 from common import ExperimentFrame, InstructionsAndUnderstanding, InstructionsFrame
 from gui import GUI
 from login import Login

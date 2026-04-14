@@ -3,8 +3,8 @@ ATTENTION_BONUS = 10
 QUIZ_BONUS = 5
 POSTDICTION_BONUS = 20
 
-AUTOFILL = True
-TESTING = True
+AUTOFILL = False
+TESTING = False
 GOTHROUGH = False
 URL = "https://bahnik.pythonanywhere.com/"
 #URL = "TEST"

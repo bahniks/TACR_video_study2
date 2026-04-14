@@ -11,16 +11,17 @@ from gui import GUI
 
 
 class TikTok:
-    def __init__(self, canvas, width=600, height=337):
+    def __init__(self, canvas, width=600, height=337, owner=None):
         self.canvas = canvas
         self.width = width
         self.height = height
+        self.owner = owner
 
         self.canvas.configure(width=self.width, height=self.height)
         self.canvas.configure(background="black", highlightbackground="black", highlightcolor="black")
 
         self.distraction_videos = self.get_distraction_videos()
-        self.current_distraction_index = 0
+        self.current_distraction_index = self._get_saved_index()
         self.player2 = None
         self.running = True
 
@@ -51,9 +52,15 @@ class TikTok:
         self.player2.audio_set_mute(True)
         self.player2.play()
         self.current_distraction_index += 1
+        self._save_index(self.current_distraction_index)
 
     def stop(self):
+        if not self.running:
+            return
+
         self.running = False
+        self.current_distraction_index += 1
+        self._save_index(self.current_distraction_index)
         if self.player2 is not None:
             self.player2.stop()
 
@@ -62,10 +69,48 @@ class TikTok:
 
     def get_distraction_videos(self):
         distractions_path = os.path.join(os.getcwd(), "Stuff", "Distractions")
-        videos = [f for f in os.listdir(distractions_path)]
+        allowed_extensions = {".mp4", ".avi", ".mov", ".mkv"}
+        videos = [
+            f for f in os.listdir(distractions_path)
+            if os.path.splitext(f)[1].lower() in allowed_extensions
+        ]
+        status = self._get_status()
+        if status is not None and "tiktok_video_order" in status:
+            saved_order = status["tiktok_video_order"]
+            if (
+                isinstance(saved_order, list)
+                and saved_order
+                and all(os.path.splitext(path)[1].lower() in allowed_extensions for path in saved_order)
+            ):
+                return saved_order
+
         full_paths = [os.path.join(distractions_path, v) for v in videos]
         random.shuffle(full_paths)
+        if status is not None:
+            status["tiktok_video_order"] = full_paths
         return full_paths
+
+    def _get_status(self):
+        if self.owner is None:
+            return None
+        root = getattr(self.owner, "root", None)
+        if root is None:
+            return None
+        status = getattr(root, "status", None)
+        if isinstance(status, dict):
+            return status
+        return None
+
+    def _get_saved_index(self):
+        status = self._get_status()
+        if status is None:
+            return 0
+        return int(status.get("tiktok_index", 0))
+
+    def _save_index(self, index):
+        status = self._get_status()
+        if status is not None:
+            status["tiktok_index"] = int(index)
 
 
 class TikTokTest(ExperimentFrame):
@@ -75,7 +120,7 @@ class TikTokTest(ExperimentFrame):
         canvas = Canvas(self, width=600, height=337, background="black", highlightbackground="black", highlightcolor="black")
         canvas.grid(row=0, column=0)
 
-        self.tiktok = TikTok(canvas, width=600, height=337)
+        self.tiktok = TikTok(canvas, width=600, height=337, owner=self)
         self.tiktok.play()
 
     def stop(self):

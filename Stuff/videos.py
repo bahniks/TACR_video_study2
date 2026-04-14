@@ -154,8 +154,8 @@ class Videos2(ExperimentFrame):
         self.canvas2.bind("<Configure>", self._on_right_canvas_configure)
 
         self.columnconfigure(0, weight=1)
-        self.columnconfigure(1, weight=1)
-        self.columnconfigure(2, weight=1)
+        self.columnconfigure(1, weight=0)
+        self.columnconfigure(2, weight=0)
         self.columnconfigure(3, weight=1)
         self.rowconfigure(0, weight=1)
         self.rowconfigure(2, weight=1)
@@ -188,6 +188,8 @@ class Videos2(ExperimentFrame):
             "control": Empty
         }
         if self.content_type == "game":
+            self.right_content = content_map[self.content_type](self.canvas2, width=480, height=854, owner=self)
+        elif self.content_type == "tiktok":
             self.right_content = content_map[self.content_type](self.canvas2, width=480, height=854, owner=self)
         else:
             self.right_content = content_map[self.content_type](self.canvas2, width=480, height=854)
@@ -243,6 +245,9 @@ class Videos2(ExperimentFrame):
             self.file.write("Focus time\t{}\t{}\t{}\t{}\t{}\t{}\n\n".format(self.id, self.root.status["videoNumber"], self.content_type, self.focusTime, self.focusProportion, "|".join(map(str, self.focusToggle))))
         self.player.stop()
         self.right_content.stop()
+        self.canvas2.delete("all")
+        self.canvas2.configure(background="white")
+        self.canvas2.update()
         self.playback_cleanup_done = True
 
     def stop(self):
@@ -267,7 +272,7 @@ class Videos2(ExperimentFrame):
         self.right_overlay_window.overrideredirect(True)
         self.right_overlay_window.configure(background="#3A3A3A")
         self.right_overlay_window.attributes("-alpha", 0.6)
-        self.right_overlay_window.transient(self.winfo_toplevel())
+        self.right_overlay_window.attributes("-topmost", True)
 
     def _refresh_right_overlay(self):
         self.overlay_refresh_job = None

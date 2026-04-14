@@ -33,6 +33,8 @@ class GUI(Tk):
 
         self.screenwidth = 1280 # 1680 # 1920 # adjust
         self.screenheight = 1024 # 1050 # 1080 # adjust
+        #self.screenwidth = 1920
+        #self.screenheight = 1080
 
         os.chdir(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
         filepath = os.path.join(os.getcwd(), "Data")
