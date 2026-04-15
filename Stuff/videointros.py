@@ -25,7 +25,7 @@ Nyní si nasaďte sluchátka a kliknutím na tlačítko "Test zvuku" ozkoušejte
 
 videoinstructions = """Celkem budete sledovat osm videí ve dvou modulech. Ke každému videu je navázáno pět otázek v kvízu, který budete vyplňovat před koncem studie, tedy po zhlédnutí videí a vyplnění dotazníků. Celkem tedy bude v kvízu 40 otázek. Kvíz bude obsahovat otázky z každého videa, ale otázky nebudou rozděleny podle videí, takže nebudete vědět, které otázky se vztahují k jakému videu. Za každou správnou odpověď v kvízu získáte 5 Kč. Celkem tedy můžete získat až 200 Kč za správné odpovědi v kvízu.
 
-Videa budou zobrazena na levé straně obrazovky. Během sledování videa se může na pravé straně obrazovky objevit sekundární panel s různým obsahem. <b>Obsahu tohoto panelu se nemusíte všímat a nijak se nevztahuje k obsahu kvízu. Nijak tedy neovlivní Vaši odměnu a nevztahují se k němu žádné další části studie.</b>
+Videa budou zobrazena na levé straně obrazovky. Během sledování videa se může na pravé straně obrazovky objevit sekundární panel s různým obsahem. <b>Obsahu tohoto panelu si nemusíte všímat a nijak se nevztahuje k obsahu kvízu. Nijak tedy neovlivní Vaši odměnu a nevztahují se k němu žádné další části studie.</b>
 
 Klikněte na tlačítko "Pokračovat"."""
 

@@ -22,7 +22,7 @@ class Chat:
         "message_delay_min": 1500,
         "message_delay_max": 3000,
         "typing_delay_min": 1000,
-        "typing_delay_max": 5500,
+        "typing_delay_max": 7500,
         "typing_ms_per_character": 70,
         
         # UI dimensions

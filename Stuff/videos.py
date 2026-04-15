@@ -271,7 +271,7 @@ class Videos2(ExperimentFrame):
         self.right_overlay_window = Toplevel(self)
         self.right_overlay_window.overrideredirect(True)
         self.right_overlay_window.configure(background="#3A3A3A")
-        self.right_overlay_window.attributes("-alpha", 0.6)
+        self.right_overlay_window.attributes("-alpha", 0.7)
         self.right_overlay_window.attributes("-topmost", True)
 
     def _refresh_right_overlay(self):
