@@ -376,7 +376,7 @@ class Videos2(ExperimentFrame):
     def _manual_enable_next(self, event=None):
         if self.playback_cleanup_done:
             return "break"
-        self._handle_video_end()
+        self.next["state"] = "normal"
         return "break"
 
     def stop(self):
