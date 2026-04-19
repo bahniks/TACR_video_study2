@@ -242,13 +242,24 @@ class BoostVideo(Videos):
     def getVideo(self):
         return os.path.join(os.getcwd(), "Stuff", "Videos", "boost.mp4")
 
+    def __init__(self, root):
+        super().__init__(root)
+        # Pause immediately after the parent started playback, then resume after 1 s
+        self.player.pause()
+        self.after(1000, self.player.play)
+
+    def on_video_end(self, event):
+        """Hide the video canvas and reveal the next button when video ends."""
+        self.canvas.grid_remove()
+        self.next["state"] = "normal"
+
     def stop(self):
         self.player.stop()
         self.nextFun()
 
     def gothrough(self):
         self.stop()
-        return super().gothrough()
+        return super(Videos, self).gothrough()
 
 
 BoostUnderstandingCheck = (InstructionsAndUnderstanding,

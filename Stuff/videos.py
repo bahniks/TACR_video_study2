@@ -62,13 +62,20 @@ postdictionIncorrect = """Váš odhad počtu správných odpovědí v kvízu se 
 ############################################################################
 
 
-_vlc_instance = vlc.Instance('--aout=waveout', '--vout=direct3d9')
+_vlc_instance = vlc.Instance(
+    '--aout=directsound',
+    '--avcodec-hw=none',
+    '--no-video-title-show',
+    '--drop-late-frames',
+    '--skip-frames',
+)
 
 class Videos(ExperimentFrame):
     def __init__(self, root):
         super().__init__(root)
         self.root = root
         self.video_path = self.getVideo()
+        self.playback_started = False
 
         # Create tkinter canvas for video
         self.canvas = Canvas(self, width=1200, height=674, background = "white", highlightbackground = "white", highlightcolor = "white")
@@ -82,8 +89,10 @@ class Videos(ExperimentFrame):
         # Initialize VLC player
         self.player = _vlc_instance.media_player_new()
 
-        # Set the video output to the tkinter canvas
-        self.player.set_hwnd(self.canvas.winfo_id())
+        # Ensure the canvas window exists before giving its handle to VLC.
+        self.update_idletasks()
+        self.canvas.update_idletasks()
+        self.player.set_hwnd(int(self.canvas.winfo_id()))
 
         # Load the video file
         media = _vlc_instance.media_new(self.video_path)
@@ -105,6 +114,24 @@ class Videos(ExperimentFrame):
     def on_video_end(self, event):
         """Callback for when the video ends."""
         self.next["state"] = "normal"
+
+    def gothrough(self):
+        deadline = perf_counter() + 3.0
+        while perf_counter() < deadline:
+            self.update()
+            if self.player.get_state() == vlc.State.Playing:
+                self.playback_started = True
+                break
+            sleep(0.05)
+
+        if self.playback_started:
+            end_time = perf_counter() + 1.5
+            while perf_counter() < end_time:
+                self.update()
+                sleep(0.05)
+
+        self.next["state"] = "normal"
+        self.next.invoke()
 
     def stop(self):
         self.player.stop()
@@ -141,6 +168,10 @@ class Videos2(ExperimentFrame):
         self.overlay_refresh_job = None
         self.right_overlay_window = None
         self.playback_cleanup_done = False
+        self.end_watchdog_job = None
+        self.delayed_play_job = None
+        self.preview_pause_job = None
+        self.playback_started = False
         self.focusToggle = []
         self.focusTime = 0
 
@@ -162,7 +193,6 @@ class Videos2(ExperimentFrame):
 
         # Initialize VLC player for left video with audio output
         self.player = _vlc_instance.media_player_new()
-        self.player.set_hwnd(self.canvas1.winfo_id())
 
         # Load the video file
         media = _vlc_instance.media_new(self.video_path)
@@ -174,9 +204,13 @@ class Videos2(ExperimentFrame):
         # Bind the VLC event manager to detect when video ends
         self.event_manager = self.player.event_manager()
         self.event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.on_video_end)
+        self.event_manager.event_attach(vlc.EventType.MediaPlayerEncounteredError, self.on_video_error)
 
-        # Play the video
-        self.player.play()
+        # Prepare the video surface immediately so the first frame can appear,
+        # then resume normal playback after the 1-second pause.
+        self.after(0, self._prepare_video_preview)
+        self.delayed_play_job = self.after(1000, self._resume_video_playback)
+        self._schedule_end_watchdog()
 
         videos2_index = self.root.status.get("videos2_index", 0)
         self.content_type = self.root.status["distractions"][videos2_index]
@@ -218,8 +252,16 @@ class Videos2(ExperimentFrame):
         if not TESTING:
             self.next["state"] = "disabled"
 
+        # Emergency unlock for rare VLC EOF/event issues.
+        self.bind_all("<Control-Shift-Alt-KeyPress-G>", self._manual_enable_next)
+        self.bind_all("<Control-Shift-Alt-KeyPress-g>", self._manual_enable_next)
+
     def on_video_end(self, event):
         """Callback for when main video ends."""
+        self.after(0, self._handle_video_end)
+
+    def on_video_error(self, event):
+        """Fail-safe callback when VLC reports a playback error."""
         self.after(0, self._handle_video_end)
 
     def _handle_video_end(self):
@@ -231,8 +273,22 @@ class Videos2(ExperimentFrame):
         if self.playback_cleanup_done:
             return
 
+        if self.delayed_play_job is not None:
+            self.after_cancel(self.delayed_play_job)
+            self.delayed_play_job = None
+        if self.preview_pause_job is not None:
+            self.after_cancel(self.preview_pause_job)
+            self.preview_pause_job = None
+        if self.end_watchdog_job is not None:
+            self.after_cancel(self.end_watchdog_job)
+            self.end_watchdog_job = None
+        self.unbind_all("<Control-Shift-Alt-KeyPress-G>")
+        self.unbind_all("<Control-Shift-Alt-KeyPress-g>")
+
         self.overlay_enabled.set(False)
         self.overlay_toggle["state"] = "disabled"
+        if self.root.status.get("condition") == "nudge":
+            self.overlay_toggle.grid_remove()
         if self.overlay_refresh_job is not None:
             self.after_cancel(self.overlay_refresh_job)
             self.overlay_refresh_job = None
@@ -245,10 +301,83 @@ class Videos2(ExperimentFrame):
             self.file.write("Focus time\t{}\t{}\t{}\t{}\t{}\t{}\n\n".format(self.id, self.root.status["videoNumber"], self.content_type, self.focusTime, self.focusProportion, "|".join(map(str, self.focusToggle))))
         self.player.stop()
         self.right_content.stop()
+        for child in self.canvas2.winfo_children():
+            child.destroy()
         self.canvas2.delete("all")
-        self.canvas2.configure(background="white")
-        self.canvas2.update()
+        if self.content_type == "tiktok":
+            # Hide the whole right panel to avoid a lingering black VLC surface.
+            self.canvas2.grid_remove()
+        else:
+            self.canvas2.configure(background="white")
+            self.canvas2.update()
         self.playback_cleanup_done = True
+
+    def _prepare_video_preview(self):
+        if self.playback_cleanup_done:
+            return
+
+        # On some machines VLC fails if HWND is bound before the canvas is mapped.
+        if not self.canvas1.winfo_ismapped():
+            self.after(100, self._prepare_video_preview)
+            return
+
+        self.update_idletasks()
+        self.canvas1.update_idletasks()
+        self.player.set_hwnd(int(self.canvas1.winfo_id()))
+        # Start decoding immediately so VLC can paint the first frame.
+        self.player.play()
+        if self.preview_pause_job is None:
+            self.preview_pause_job = self.after(150, self._pause_preview_playback)
+
+    def _pause_preview_playback(self):
+        self.preview_pause_job = None
+        if self.playback_cleanup_done:
+            return
+        if self.player.get_state() in (vlc.State.Playing, vlc.State.Opening, vlc.State.Buffering):
+            self.player.pause()
+
+    def _resume_video_playback(self):
+        self.delayed_play_job = None
+        if self.playback_cleanup_done:
+            return
+        self.player.play()
+        self.playback_started = True
+
+    def _schedule_end_watchdog(self):
+        if self.end_watchdog_job is not None:
+            self.after_cancel(self.end_watchdog_job)
+        self.end_watchdog_job = self.after(1000, self._end_watchdog_tick)
+
+    def _end_watchdog_tick(self):
+        self.end_watchdog_job = None
+        if self.playback_cleanup_done:
+            return
+
+        state = self.player.get_state()
+        if state == vlc.State.Playing:
+            self.playback_started = True
+
+        if not self.playback_started:
+            self._schedule_end_watchdog()
+            return
+
+        if state in (vlc.State.Ended, vlc.State.Error):
+            self._handle_video_end()
+            return
+
+        length_ms = self.player.get_length()
+        time_ms = self.player.get_time()
+        if length_ms > 0 and time_ms >= max(0, length_ms - 250):
+            self._handle_video_end()
+            return
+
+        self._schedule_end_watchdog()
+
+    def _manual_enable_next(self, event=None):
+        if self.playback_cleanup_done:
+            return "break"
+        self._handle_video_end()
+        return "break"
 
     def stop(self):
         self._cleanup_playback_state()
@@ -256,8 +385,21 @@ class Videos2(ExperimentFrame):
         self.nextFun()
 
     def gothrough(self):
+        deadline = perf_counter() + 4.0
+        while perf_counter() < deadline:
+            self.update()
+            if self.playback_started or self.player.get_state() == vlc.State.Playing:
+                self.playback_started = True
+                break
+            sleep(0.05)
+
+        if self.playback_started:
+            end_time = perf_counter() + 1.5
+            while perf_counter() < end_time:
+                self.update()
+                sleep(0.05)
+
         self.next["state"] = "normal"
-        sleep(0.5)
         self.next.invoke()
 
     def _on_right_canvas_configure(self, event):

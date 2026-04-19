@@ -18,7 +18,7 @@ from login import Login
 
 soundcheck = """Pro sledování videí je důležité, abyste měli zapnutý zvuk a nasazená sluchátka.
 
-Nyní si nasaďte sluchátka a kliknutím na tlačítko "Test zvuku" ozkoušejte, zda zvuk funguje. Pokud zvuk nefunguje, zkontrolujte prosím nastavení zvuku na Vašich sluchátkách a zkuste to znovu. Pokud problém přetrvává, zavolejte prosím výzkumného asistenta zvednutím ruky.
+Nyní si nasaďte sluchátka a kliknutím na tlačítko "Test zvuku" ozkoušejte, zda zvuk funguje a zda je hlasitost dostatečná. Pokud zvuk nefunguje nebo je hlasitost nedostatečná, zkontrolujte prosím nastavení zvuku na Vašich sluchátkách, kde najdete ovládání hlasitosti, a zkuste to znovu. Pokud problém přetrvává, zavolejte prosím výzkumného asistenta zvednutím ruky.
 
 <b>Poté, co ozkoušíte, že zvuk funguje, klikněte na tlačítko "Pokračovat".</b>"""
 

@@ -12,18 +12,18 @@ from gui import GUI
 
 
 class Chat:
-    _used_chat_files = set()
-    _used_nicknames = set()
-    _nickname_counter = 1
+    _chat_order = None  # shuffled [chatA.txt, chatB.txt], initialised once
+    _chat_index = 0     # index of the next chat to show
 
     # Configuration parameters
     CONFIG = {
         # Timing (in milliseconds)
         "message_delay_min": 1500,
-        "message_delay_max": 3000,
+        "message_delay_max": 5000,
         "typing_delay_min": 1000,
-        "typing_delay_max": 7500,
+        "typing_delay_max": 9000,
         "typing_ms_per_character": 70,
+        "reading_ms_per_character": 40,
         
         # UI dimensions
         "canvas_width": 600,
@@ -79,7 +79,7 @@ class Chat:
         self.scrollbar = ttk.Scrollbar(self.canvas, orient="vertical", command=self.canvas.yview)
         self.scrollbar_visible = False
 
-        self.speaker_nicknames = self.sample_speaker_nicknames()
+        self.speaker_nicknames = {}
         self.current_chat_file = None
         self.messages = []
         self.current_message_index = 0
@@ -112,48 +112,31 @@ class Chat:
         self.playing = True
         self.schedule_next_message()
 
-    def sample_speaker_nicknames(self):
-        nicknames = [
-            "Klara_23", "BrnoVibe", "NocniSova", "Anezka", "Vltava", "CodeMacek",
-            "Lucie", "BuchtaDev", "Tyna", "Nela.exe", "Zuzka.cz", "PrahaVibe",
-            "TetaScript", "RanniKafe", "KavarnaMood", "ModraTuha", "LiskaPixel", "MestskyVitr",
-            "Svetylko", "ByteBeruska", "VercaLoop", "LenkaCloud", "Kvetinac", "NoraNode"
+    def sample_speaker_nicknames(self, male=False):
+        female_nicknames = [
+            "Klara_23", "NocniSova", "Vltava", "Lucie", "Tyna", "Zuzka.cz",
+            "TetaScript", "KavarnaMood", "LiskaPixel", "Svetylko", "VercaLoop", "Kvetinac"
         ]
-
-        available = [name for name in nicknames if name not in Chat._used_nicknames]
-        sampled = random.sample(available, min(len(available), self.CONFIG["num_speakers"]))
-        while len(sampled) < self.CONFIG["num_speakers"]:
-            generated = f"Uzivatelka{Chat._nickname_counter}"
-            Chat._nickname_counter += 1
-            if generated not in Chat._used_nicknames:
-                sampled.append(generated)
-
-        Chat._used_nicknames.update(sampled)
+        male_nicknames = [
+            "MoravaVibes", "Radek", "DevMajster", "SvickovaDev", "Honza.exe", "BrnoHajp",
+            "VecerniPivo", "ModrySter", "MestskyChlap", "ByteChrobak", "TomasCloud", "PetrNode"
+        ]
+        pool = male_nicknames if male else female_nicknames
+        sampled = random.sample(pool, min(len(pool), self.CONFIG["num_speakers"]))
         return {"s1": sampled[0], "s2": sampled[1]}
 
-    def _available_chat_files(self):
-        chats_path = os.path.join(os.getcwd(), "Stuff", "Chats")
-        if not os.path.exists(chats_path):
-            return chats_path, []
-
-        chat_files = [
-            f for f in os.listdir(chats_path)
-            if os.path.isfile(os.path.join(chats_path, f)) and f.lower().endswith(".txt")
-        ]
-        return chats_path, chat_files
-
     def _select_next_chat_file(self):
-        chats_path, chat_files = self._available_chat_files()
-        if not chat_files:
+        if Chat._chat_order is None:
+            Chat._chat_order = ["chatA.txt", "chatB.txt"]
+            random.shuffle(Chat._chat_order)
+
+        if Chat._chat_index >= len(Chat._chat_order):
             return None
 
-        unused_files = [f for f in chat_files if f not in Chat._used_chat_files]
-        if not unused_files:
-            return None
-
-        selected_file = random.choice(unused_files)
-        Chat._used_chat_files.add(selected_file)
-        return os.path.join(chats_path, selected_file)
+        filename = Chat._chat_order[Chat._chat_index]
+        Chat._chat_index += 1
+        chats_path = os.path.join(os.getcwd(), "Stuff", "Chats")
+        return os.path.join(chats_path, filename)
 
     def load_next_chat_messages(self):
         selected_path = self._select_next_chat_file()
@@ -161,6 +144,8 @@ class Chat:
             return []
 
         self.current_chat_file = selected_path
+        is_male = os.path.basename(selected_path).lower() == "chatb.txt"
+        self.speaker_nicknames = self.sample_speaker_nicknames(male=is_male)
 
         parsed_messages = []
         with open(selected_path, "r", encoding="utf-8") as f:
@@ -210,7 +195,8 @@ class Chat:
         if self.current_message_index >= len(self.messages):
             return
 
-        delay_ms = random.randint(self.CONFIG["message_delay_min"], self.CONFIG["message_delay_max"])
+        prev_text = self.messages[self.current_message_index - 1][2] if self.current_message_index > 0 else ""
+        delay_ms = self._reading_delay_for_char_count(len(prev_text))
         self.next_message_job = self.canvas.after(delay_ms, self.show_typing_indicator)
 
     def show_typing_indicator(self):
@@ -225,6 +211,12 @@ class Chat:
 
         typing_delay_ms = self._typing_delay_for_message(text)
         self.typing_job = self.canvas.after(typing_delay_ms, self.show_next_message)
+
+    def _reading_delay_for_char_count(self, char_count):
+        ms_per_char = self.CONFIG["reading_ms_per_character"]
+        lo = self.CONFIG["message_delay_min"] + char_count * ms_per_char
+        hi = self.CONFIG["message_delay_max"] + char_count * ms_per_char
+        return random.randint(lo, hi)
 
     def _typing_delay_for_message(self, text):
         delay_ms = len(text) * self.CONFIG["typing_ms_per_character"]
