@@ -341,8 +341,8 @@ class BlockQuestionnaire(InstructionsFrame):
                 correct_checks = str(self.root.status["attention_checks"])
                 self.file.write(self.id + "\t" + self.name + "\t" + correct_checks + "\n\n")
                 if int(correct_checks) > 0:
-                    self.root.status["results"] += [bonusGained.format(oneCheck if self.checksNumber == 1 else twoChecks, self.checksNumber * ATTENTION_BONUS)]
-                    self.root.status["reward"] += self.checksNumber * ATTENTION_BONUS
+                    self.root.status["results"] += [bonusGained.format(oneCheck if int(correct_checks) == 1 else twoChecks, int(correct_checks) * ATTENTION_BONUS)]
+                    self.root.status["reward"] += int(correct_checks) * ATTENTION_BONUS
                 else:
                     self.root.status["results"] += [bonusNotGained]
             self.destroy()
