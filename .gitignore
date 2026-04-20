@@ -1,5 +1,6 @@
 temp.json
 Data/*.txt
+Data/extracted/*.tsv
 Stuff/Distractions/*.mp4
 !Data/extract.py
 

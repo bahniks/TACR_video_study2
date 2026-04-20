@@ -1,116 +1,217 @@
 #! python3
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 
-import os
-import uuid
+from __future__ import annotations
+
+from collections import defaultdict
+from pathlib import Path
+import re
 
 
-studies = {"Login": ("id", "first_video","second_video"),
-           "JOL": ("id", "trial", "version", "answer"),
-           "IMI1": ("id", "item", "answer"),
-           "Quiz1": ("id", "trial", "question", "answer", "correct", "total_correct", "condition", "version"), 
-           "IMI2": ("id", "item", "answer"),
-           "Quiz2": ("id", "trial", "question", "answer", "correct", "total_correct", "condition", "version"), 
-           "Selection": ("id", "choice", "condition"),
-           "IMI3": ("id", "item", "answer"),
-           "Quiz3": ("id", "trial", "question", "answer", "correct", "total_correct", "condition", "version"), 
-           "NFC": ("id", "item", "answer"),           
-           "Boredom": ("id", "item", "answer"),
-           "Hexaco": ("id", "trial", "answer", "item"),
-           "Attention checks": ("id", "questionnaire", "correct"),
-           "Social": ("id", "item", "answer"),
-           "Demographics": ("id", "sex", "age", "language", "student", "field"),
-           "Comments": ("id", "comment"),
-           "Ending": ("id", "reward")}
+DATA_DIR = Path(__file__).resolve().parent
+OUTPUT_DIR = DATA_DIR / "extracted"
 
-frames = ["Initial",
-          "Login",
-          "Intro",              
-          "VideoIntro1",
-          "VideoIntro2",
-          "Sound",
-          "Videos", "JOL", "IMI1", "Quiz1",
-          "VideoIntro4",
-          "Videos", "JOL", "IMI2", "Quiz2",
-          "VideoIntro5",
-          "Selection",
-          "VideoIntro6",
-          "Videos", "Videos", "Videos", "Videos", "Videos",
-          "IMI3",
-          "Quiz3",
-          "QuestInstructions",
-          "NFC",
-          "Boredom",
-          "Hexaco",
-          "Social",
-          "Demographics",
-          "Comments",
-          "Ending",         
-          "end"
-         ]
+SECTION_COLUMNS = {
+    "Login": [
+        "id",
+        "condition",
+        "distraction_1",
+        "distraction_2",
+        "distraction_3",
+        "distraction_4",
+        "distraction_5",
+        "distraction_6",
+        "distraction_7",
+        "distraction_8",
+    ],
+    "Attention": ["id", "trial", "attention_to_video", "attention_drift"],
+    "Game": [
+        "id",
+        "game_number",
+        "video_number",
+        "pressed_keys",
+        "max_time_between_keys",
+        "score_end",
+        "start_time",
+        "end_time",
+    ],
+    "Focus time": ["id", "trial", "content_type", "focus_time", "focus_proportion", "toggle_times"],
+    "EndQuestionnaire": [
+        "id",
+        "overall_attention",
+        "attention_drift_frequency",
+        "intentional_refocus_frequency",
+        "used_strategy",
+        "strategy_usefulness",
+        "strategy_description",
+    ],
+    "UPPS": ["id", "item", "answer"],
+    "SCI": ["id", "sleep_1", "sleep_2", "sleep_3", "sleep_4", "sleep_5", "sleep_6", "sleep_7", "sleep_8"],
+    "SAMS": ["id", "item", "answer", "statement"],
+    "Mindset": ["id", "item", "answer", "statement"],
+    "Attention checks": ["id", "questionnaire", "correct"],
+    "Boost understanding": ["id", "trial", "answer"],
+    "Boost plan choice": ["id", "when_part", "then_part"],
+    "Quiz": ["id", "trial", "question", "answer", "correct", "total_correct"],
+    "Postdiction": ["id", "estimate_correct", "actual_correct"],
+    "Demographics": ["id", "sex", "age", "language", "student", "field"],
+    "Comments": ["id", "comment"],
+    "Ending": ["id", "reward"],
+}
 
-read = True
-compute = True
+SECTION_FILENAME = {name: f"{name.lower().replace(' ', '_')}_results.tsv" for name in SECTION_COLUMNS}
+SECTION_FILENAME["Focus time"] = "focus_time_results.tsv"
 
-if read:
-    for study in studies:
-        with open("{} results.txt".format(study), mode = "w", encoding = "utf-8") as f:
-            f.write("\t".join(studies[study]))
+TIME_FILENAME = "time_results.tsv"
+FRAME_TIME_SUMMARY_FILENAME = "frame_time_summary.tsv"
 
-    with open("Time results.txt", mode = "w", encoding = "utf-8") as times:
-        times.write("\t".join(["id", "order", "frame", "time"]))
+UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
-    files = os.listdir()
-    for file in files:
-        if ".py" in file or "results" in file or "file.txt" in file or ".txt" not in file:
+
+def parse_participant_id_from_filename(path: Path) -> str:
+    stem = path.stem
+    parts = stem.split("_", 4)
+    if len(parts) == 5 and UUID_RE.match(parts[4]):
+        return parts[4]
+    return ""
+
+
+def parse_time_line(line: str) -> tuple[float, str, str] | None:
+    if not line.startswith("time: "):
+        return None
+    payload = line[len("time: "):]
+    pieces = payload.split("\t")
+    if len(pieces) < 3:
+        return None
+    try:
+        timestamp = float(pieces[0])
+    except ValueError:
+        return None
+    order = pieces[1]
+    frame = pieces[2]
+    return timestamp, order, frame
+
+
+def pad_or_extend(fields: list[str], width: int) -> list[str]:
+    if len(fields) >= width:
+        return fields
+    return fields + [""] * (width - len(fields))
+
+
+def normalize_row(section: str, row: str) -> list[str]:
+    fields = row.split("\t")
+    expected_cols = SECTION_COLUMNS.get(section, [])
+    expected_width = len(expected_cols)
+    if expected_width == 0:
+        return fields
+    return pad_or_extend(fields, expected_width)
+
+
+def parse_file(path: Path, section_rows: dict[str, list[list[str]]], time_rows: list[list[str]]) -> None:
+    participant_id = parse_participant_id_from_filename(path)
+    lines = path.read_text(encoding="utf-8").splitlines()
+
+    previous_time = None
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+
+        if not line:
+            i += 1
             continue
 
-        with open(file, encoding = "utf-8") as datafile:
-            #filecount += 1 #
-            count = 1
-            for line in datafile:
+        time_data = parse_time_line(line)
+        if time_data is not None:
+            timestamp, order, frame = time_data
+            delta = "" if previous_time is None else str(timestamp - previous_time)
+            time_rows.append([path.name, participant_id, order, frame, str(timestamp), delta])
+            previous_time = timestamp
+            i += 1
+            continue
 
-                study = line.strip()
-                if line.startswith("time: "):
-                    with open("Time results.txt", mode = "a") as times:
-                        #print(frames[count-1])
-                        #print(line.split()[1])
-                        times.write("\n" + "\t".join([file, str(count), frames[count-1], line.split()[1]]))
-                        count += 1
-                        continue
-                if study in studies:
-                    with open("{} results.txt".format(study), mode = "a", encoding = "utf-8") as results:
-                        for line in datafile:
-                            content = line.strip()
-                            if not content or content.startswith("time: "):
-                                break
-                            elif len(content.split("\t")[0]) == 36:
-                                try:
-                                    uuid.UUID(content.split("\t")[0])
-                                    results.write("\n" + content)
-                                except ValueError:
-                                    results.write(" " + content)
-                            else:
-                                results.write(" " + content)
-                            
+        if line.startswith("Focus time\t"):
+            section = "Focus time"
+            raw_fields = line.split("\t")
+            section_rows[section].append(normalize_row(section, "\t".join(raw_fields[1:])))
+            i += 1
+            continue
 
-if compute:
-    times = {frame: [] for frame in frames}
-    with open("Time results.txt", mode = "r") as t:
-        t.readline()
-        for line in t:
-            _, num, frame, time = line.split("\t")    
-            if int(num) > 1:            
-                times[frame0].append(float(time) - t0)            
-            t0 = float(time)
-            frame0 = frame
+        if line in SECTION_COLUMNS:
+            section = line
+            i += 1
+            while i < len(lines):
+                candidate = lines[i].strip()
+                if not candidate:
+                    i += 1
+                    break
+                if candidate.startswith("time: "):
+                    break
+                if candidate in SECTION_COLUMNS:
+                    break
+                section_rows[section].append(normalize_row(section, candidate))
+                i += 1
+            continue
 
-    total = 0
-    for frame, ts in times.items():
-        if ts:
-            if frame != "Ending":
-                total += sum(ts)/len(ts)
-    print("Total")
-    print(round(total / 60, 2))
+        i += 1
+
+
+def write_tsv(path: Path, header: list[str], rows: list[list[str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as out:
+        lines = ["\t".join(header)]
+        lines.extend("\t".join(row) for row in rows)
+        out.write("\n".join(lines))
+
+
+def build_frame_summary(time_rows: list[list[str]]) -> list[list[str]]:
+    by_frame = defaultdict(list)
+    for _, _, _, frame, _, delta in time_rows:
+        if delta:
+            try:
+                by_frame[frame].append(float(delta))
+            except ValueError:
+                pass
+
+    rows = []
+    for frame in sorted(by_frame):
+        values = by_frame[frame]
+        if not values:
+            continue
+        avg_seconds = sum(values) / len(values)
+        rows.append([frame, str(len(values)), str(avg_seconds), str(avg_seconds / 60.0)])
+    return rows
+
+
+def main() -> None:
+    section_rows: dict[str, list[list[str]]] = {name: [] for name in SECTION_COLUMNS}
+    time_rows: list[list[str]] = []
+
+    for data_file in sorted(DATA_DIR.glob("*.txt")):
+        parse_file(data_file, section_rows, time_rows)
+
+    for section_name, rows in section_rows.items():
+        if not rows:
+            continue
+        filename = SECTION_FILENAME[section_name]
+        write_tsv(OUTPUT_DIR / filename, SECTION_COLUMNS[section_name], rows)
+
+    write_tsv(
+        OUTPUT_DIR / TIME_FILENAME,
+        ["source_file", "participant_id", "order", "frame", "timestamp", "elapsed_from_previous"],
+        time_rows,
+    )
+
+    frame_summary_rows = build_frame_summary(time_rows)
+    write_tsv(
+        OUTPUT_DIR / FRAME_TIME_SUMMARY_FILENAME,
+        ["frame", "n", "avg_seconds", "avg_minutes"],
+        frame_summary_rows,
+    )
+
+    print(f"Extracted files written to: {OUTPUT_DIR}")
+
+
+if __name__ == "__main__":
+    main()
 
             
