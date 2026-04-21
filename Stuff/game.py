@@ -112,29 +112,46 @@ class Game:
         self.start_job = None
 
         self.score = 0
+        self._stopped = False
 
         self._recalculate_layout()
         self._spawn_piece()
         self._draw()
 
+    def _is_widget_alive(self, widget):
+        if widget is None:
+            return False
+        try:
+            return bool(widget.winfo_exists())
+        except TclError:
+            return False
+
     def stop(self):
+        if self._stopped:
+            return
+        self._stopped = True
         self._finalize_current_run()
         self._write_data()
         self.running = False
         if self.loop_job is not None:
-            self.canvas.after_cancel(self.loop_job)
+            if self._is_widget_alive(self.canvas):
+                self.canvas.after_cancel(self.loop_job)
             self.loop_job = None
         if self.restart_job is not None:
-            self.canvas.after_cancel(self.restart_job)
+            if self._is_widget_alive(self.canvas):
+                self.canvas.after_cancel(self.restart_job)
             self.restart_job = None
         if self.start_job is not None:
-            self.canvas.after_cancel(self.start_job)
+            if self._is_widget_alive(self.canvas):
+                self.canvas.after_cancel(self.start_job)
             self.start_job = None
-        self.canvas.unbind_all("<Left>")
-        self.canvas.unbind_all("<Right>")
-        self.canvas.unbind_all("<Down>")
-        self.canvas.unbind_all("<Up>")
-        self.canvas.unbind_all("<space>")
+        if self._is_widget_alive(self.canvas):
+            self.canvas.unbind("<Configure>")
+            self.canvas.unbind_all("<Left>")
+            self.canvas.unbind_all("<Right>")
+            self.canvas.unbind_all("<Down>")
+            self.canvas.unbind_all("<Up>")
+            self.canvas.unbind_all("<space>")
 
     def play(self):
         if self.running or self.game_over or self.start_seconds_remaining is not None or self.start_show_start:
@@ -440,6 +457,8 @@ class Game:
         self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="#1a1a1a")
 
     def _draw(self):
+        if self._stopped or not self._is_widget_alive(self.canvas):
+            return
         self.canvas.delete("all")
         self.canvas.configure(background="white", highlightbackground="white", highlightcolor="white")
 
@@ -585,6 +604,8 @@ class Game:
         self.controls_y = min(self.height - 4, self.offset_y + self.board_height + 8)
 
     def on_canvas_resize(self, event):
+        if self._stopped or not self._is_widget_alive(self.canvas):
+            return
         new_width = max(100, event.width)
         new_height = max(100, event.height)
         if new_width == self.width and new_height == self.height:

@@ -24,6 +24,7 @@ class TikTok:
         self.current_distraction_index = self._get_saved_index()
         self.player2 = None
         self.running = True
+        self._stopped = False
 
         self.instance2 = vlc.Instance('--vout=direct3d9')
         self.player2 = self.instance2.media_player_new()
@@ -34,17 +35,31 @@ class TikTok:
 
         self.play_next_distraction_video()
 
+    def _is_widget_alive(self, widget):
+        if widget is None:
+            return False
+        try:
+            return bool(widget.winfo_exists())
+        except TclError:
+            return False
+
 
     def on_distraction_video_end(self, event):
-        if not self.running:
+        if self._stopped or not self.running or not self._is_widget_alive(self.canvas):
             return
-        self.canvas.after(0, self.play_next_distraction_video)
+        try:
+            self.canvas.after(0, self.play_next_distraction_video)
+        except TclError:
+            return
 
     def play_next_distraction_video(self):
-        if not self.running or not self.distraction_videos or self.player2 is None:
+        if self._stopped or not self.running or not self.distraction_videos or self.player2 is None:
             return
 
-        self.player2.stop()
+        try:
+            self.player2.stop()
+        except Exception:
+            return
 
         video_path = self.distraction_videos[self.current_distraction_index % len(self.distraction_videos)]
         media2 = self.instance2.media_new(video_path)
@@ -55,14 +70,18 @@ class TikTok:
         self._save_index(self.current_distraction_index)
 
     def stop(self):
-        if not self.running:
+        if self._stopped:
             return
 
+        self._stopped = True
         self.running = False
         self.current_distraction_index += 1
         self._save_index(self.current_distraction_index)
         if self.player2 is not None:
-            self.player2.stop()
+            try:
+                self.player2.stop()
+            except Exception:
+                return
 
     def play(self):
         return
