@@ -87,6 +87,7 @@ class Chat:
         self.next_message_job = None
         self.typing_job = None
         self.typing_row = None
+        self._stopped = False
 
         self.canvas.bind("<Configure>", self.on_canvas_configure)
         self.messages_frame.bind("<Configure>", self.on_messages_configure)
@@ -95,15 +96,35 @@ class Chat:
 
         self.load_next_chat_messages()
 
+    def _is_widget_alive(self, widget):
+        if widget is None:
+            return False
+        try:
+            return bool(widget.winfo_exists())
+        except TclError:
+            return False
+
     def stop(self):
+        if self._stopped:
+            return
+        self._stopped = True
         self._unbind_mousewheel()
         self.playing = False
         if self.next_message_job is not None:
-            self.canvas.after_cancel(self.next_message_job)
+            if self._is_widget_alive(self.canvas):
+                self.canvas.after_cancel(self.next_message_job)
             self.next_message_job = None
         if self.typing_job is not None:
-            self.canvas.after_cancel(self.typing_job)
+            if self._is_widget_alive(self.canvas):
+                self.canvas.after_cancel(self.typing_job)
             self.typing_job = None
+        if self._is_widget_alive(self.messages_frame):
+            self.messages_frame.unbind("<Configure>")
+        if self._is_widget_alive(self.canvas):
+            self.canvas.unbind("<Configure>")
+            self.canvas.unbind("<Enter>")
+            self.canvas.unbind("<Leave>")
+            self.canvas.configure(yscrollcommand="")
         self.clear_typing_indicator()
 
     def play(self):
@@ -313,14 +334,23 @@ class Chat:
             self.update_scroll_region()
 
     def on_messages_configure(self, event):
+        if self._stopped:
+            return
         self.update_scroll_region()
 
     def on_canvas_configure(self, event):
+        if self._stopped or not self._is_widget_alive(self.canvas):
+            return
         available_width = event.width - (16 if self.scrollbar_visible else 0)
-        self.canvas.itemconfigure(self.messages_window, width=max(available_width, 50))
+        try:
+            self.canvas.itemconfigure(self.messages_window, width=max(available_width, 50))
+        except TclError:
+            return
         self.update_scroll_region()
 
     def update_scroll_region(self):
+        if self._stopped or not self._is_widget_alive(self.canvas) or not self._is_widget_alive(self.messages_frame):
+            return
         self.canvas.update_idletasks()
         bbox = self.canvas.bbox("all")
         if bbox:
@@ -334,34 +364,53 @@ class Chat:
             self.hide_scrollbar()
 
     def scroll_to_bottom(self):
+        if self._stopped or not self._is_widget_alive(self.canvas):
+            return
         self.update_scroll_region()
         self.canvas.yview_moveto(1.0)
 
     def show_scrollbar(self):
-        if self.scrollbar_visible:
+        if self.scrollbar_visible or not self._is_widget_alive(self.scrollbar) or not self._is_widget_alive(self.canvas):
             return
-        self.scrollbar_visible = True
-        self.scrollbar.place(relx=1.0, rely=0.0, relheight=1.0, anchor="ne")
-        self.canvas.itemconfigure(self.messages_window, width=max(self.canvas.winfo_width() - self.CONFIG["scrollbar_width"], 50))
+        try:
+            self.scrollbar_visible = True
+            self.scrollbar.place(relx=1.0, rely=0.0, relheight=1.0, anchor="ne")
+            self.canvas.itemconfigure(self.messages_window, width=max(self.canvas.winfo_width() - self.CONFIG["scrollbar_width"], 50))
+        except TclError:
+            self.scrollbar_visible = False
 
     def hide_scrollbar(self):
-        if not self.scrollbar_visible:
+        if not self.scrollbar_visible or not self._is_widget_alive(self.scrollbar) or not self._is_widget_alive(self.canvas):
             return
-        self.scrollbar_visible = False
-        self.scrollbar.place_forget()
-        self.canvas.itemconfigure(self.messages_window, width=max(self.canvas.winfo_width(), 50))
+        try:
+            self.scrollbar_visible = False
+            self.scrollbar.place_forget()
+            self.canvas.itemconfigure(self.messages_window, width=max(self.canvas.winfo_width(), 50))
+        except TclError:
+            return
         self.update_scroll_region()
 
     def _on_canvas_scroll(self, first, last):
-        self.scrollbar.set(first, last)
+        if self._stopped or not self._is_widget_alive(self.scrollbar):
+            return
+        try:
+            self.scrollbar.set(first, last)
+        except TclError:
+            return
 
     def _bind_mousewheel(self, event=None):
+        if self._stopped or not self._is_widget_alive(self.canvas):
+            return
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
 
     def _unbind_mousewheel(self, event=None):
+        if not self._is_widget_alive(self.canvas):
+            return
         self.canvas.unbind_all("<MouseWheel>")
 
     def _on_mousewheel(self, event):
+        if self._stopped or not self._is_widget_alive(self.canvas):
+            return
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
 
