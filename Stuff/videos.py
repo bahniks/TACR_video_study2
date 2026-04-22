@@ -369,11 +369,93 @@ class Videos2(ExperimentFrame):
             self._handle_video_end()
             return
 
-        # Simple freeze detection
+        # Enhanced freeze detection with recovery
         if self.playback_started and state != vlc.State.Playing:
             print(f"WARNING: Video not playing - State: {state}, Time: {time_ms}/{length_ms}ms")
+            
+            # Initialize freeze tracking if not exists
+            if not hasattr(self, '_freeze_detect_count'):
+                self._freeze_detect_count = 0
+                self._freeze_detect_start_time = perf_counter()
+            
+            self._freeze_detect_count += 1
+            freeze_duration = perf_counter() - self._freeze_detect_start_time
+            
+            # If stuck in Opening state for more than 3 seconds, trigger recovery
+            if state == vlc.State.Opening and freeze_duration > 3.0:
+                print(f"ERROR: Video stuck in Opening state for {freeze_duration:.1f}s, triggering recovery")
+                self._handle_video_freeze_recovery()
+                return
+                
+            # If stuck in any non-playing state for more than 5 seconds, force continue
+            if freeze_duration > 5.0:
+                print(f"ERROR: Video stuck in {state} for {freeze_duration:.1f}s, forcing continue")
+                self._handle_video_freeze_recovery()
+                return
+        else:
+            # Reset freeze detection when video is playing normally
+            if hasattr(self, '_freeze_detect_count'):
+                delattr(self, '_freeze_detect_count')
+                delattr(self, '_freeze_detect_start_time')
 
         self._schedule_end_watchdog()
+
+    def _handle_video_freeze_recovery(self):
+        """Handle video freeze by either restarting playback or forcing continue"""
+        print("DEBUG: Attempting video freeze recovery...")
+        
+        try:
+            # Try to restart playback first
+            current_time = self.player.get_time()
+            if current_time > 0:
+                # Video was playing before, try to resume from current position
+                print(f"DEBUG: Attempting to resume video from {current_time}ms")
+                self.player.set_time(current_time)
+                self.player.play()
+                
+                # Give it a short moment to recover
+                self.after(500, self._check_recovery_success)
+                return
+            else:
+                # Video never started, try restarting from beginning
+                print("DEBUG: Attempting to restart video from beginning")
+                self.player.stop()
+                self.player.play()
+                
+                # Give it a short moment to recover
+                self.after(500, self._check_recovery_success)
+                return
+                
+        except Exception as e:
+            print(f"ERROR: Recovery attempt failed: {e}")
+        
+        # If all else fails, force continue
+        print("DEBUG: Recovery failed, forcing video end")
+        self._handle_video_end()
+
+    def _check_recovery_success(self):
+        """Check if recovery was successful, otherwise force continue"""
+        if self.playback_cleanup_done:
+            return
+            
+        try:
+            state = self.player.get_state()
+            print(f"DEBUG: Recovery check - State: {state}")
+            
+            if state == vlc.State.Playing:
+                print("DEBUG: Recovery successful, video is now playing")
+                # Reset freeze detection
+                if hasattr(self, '_freeze_detect_count'):
+                    delattr(self, '_freeze_detect_count')
+                    delattr(self, '_freeze_detect_start_time')
+                return
+                
+        except Exception as e:
+            print(f"ERROR: Recovery check failed: {e}")
+        
+        # Recovery failed, force continue
+        print("DEBUG: Recovery failed, forcing video end")
+        self._handle_video_end()
 
     def _manual_enable_next(self, event=None):
         if self.playback_cleanup_done:
@@ -387,20 +469,45 @@ class Videos2(ExperimentFrame):
         self.nextFun()
 
     def gothrough(self):
-        # Simple gothrough - just wait for playback to start since no preview complexity
-        deadline = perf_counter() + 5.0  # Slightly longer to account for 1s startup delay
-        while perf_counter() < deadline:
+        # Enhanced gothrough with better freeze detection
+        print("DEBUG: Starting gothrough() method")
+        
+        # Wait for playback to start (up to 5 seconds)
+        startup_deadline = perf_counter() + 5.0
+        while perf_counter() < startup_deadline:
             self.update()
             if self.playback_started:
                 break
             sleep(0.05)
 
-        if self.playback_started:
-            end_time = perf_counter() + 1.5
-            while perf_counter() < end_time:
-                self.update()
-                sleep(0.05)
+        if not self.playback_started:
+            print("WARNING: Video startup timed out, forcing continue")
+            self.next["state"] = "normal"
+            self.next.invoke()
+            return
 
+        # Wait a bit more to ensure video is actually playing
+        stabilize_end = perf_counter() + 2.0
+        video_actually_playing = False
+        
+        while perf_counter() < stabilize_end:
+            self.update()
+            try:
+                state = self.player.get_state()
+                if state == vlc.State.Playing:
+                    video_actually_playing = True
+                    break
+                elif state in (vlc.State.Error, vlc.State.Ended):
+                    print(f"DEBUG: Video in terminal state during gothrough: {state}")
+                    break
+            except:
+                pass
+            sleep(0.05)
+
+        if not video_actually_playing:
+            print("WARNING: Video never reached playing state during gothrough")
+            
+        print("DEBUG: gothrough() completed, enabling continue button")
         self.next["state"] = "normal"
         self.next.invoke()
 
