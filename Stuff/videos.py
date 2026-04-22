@@ -68,6 +68,8 @@ _vlc_instance = vlc.Instance(
     '--no-video-title-show',
     '--drop-late-frames',
     '--skip-frames',
+    '--verbose=2',  # Add verbose logging
+    '--intf=dummy',  # Disable interface
 )
 
 class Videos(ExperimentFrame):
@@ -320,14 +322,17 @@ class Videos2(ExperimentFrame):
 
         # On some machines VLC fails if HWND is bound before the canvas is mapped.
         if not self.canvas1.winfo_ismapped():
+            print(f"DEBUG: Canvas not mapped yet, retrying in 100ms")
             self.after(100, self._prepare_video_preview)
             return
 
+        print(f"DEBUG: Preparing video preview for {self.video_path}")
         self.update_idletasks()
         self.canvas1.update_idletasks()
         self.player.set_hwnd(int(self.canvas1.winfo_id()))
         # Start decoding immediately so VLC can paint the first frame.
         self.player.play()
+        print(f"DEBUG: Started video playback, state: {self.player.get_state()}")
         if self.preview_pause_job is None:
             self.preview_pause_job = self.after(150, self._pause_preview_playback)
 
@@ -356,22 +361,32 @@ class Videos2(ExperimentFrame):
             return
 
         state = self.player.get_state()
+        length_ms = self.player.get_length()
+        time_ms = self.player.get_time()
+        
+        print(f"DEBUG: Watchdog tick - State: {state}, Time: {time_ms}/{length_ms}ms, Started: {self.playback_started}")
+        
         if state == vlc.State.Playing:
             self.playback_started = True
 
         if not self.playback_started:
+            print("DEBUG: Video playback not started yet, continuing watchdog")
             self._schedule_end_watchdog()
             return
 
         if state in (vlc.State.Ended, vlc.State.Error):
+            print(f"DEBUG: Video ended or error state: {state}")
             self._handle_video_end()
             return
 
-        length_ms = self.player.get_length()
-        time_ms = self.player.get_time()
         if length_ms > 0 and time_ms >= max(0, length_ms - 250):
+            print(f"DEBUG: Video near end ({time_ms}/{length_ms}ms), triggering end")
             self._handle_video_end()
             return
+
+        # Check for potential freeze
+        if self.playback_started and state != vlc.State.Playing:
+            print(f"WARNING: Video may be frozen - State: {state}, Time: {time_ms}/{length_ms}ms")
 
         self._schedule_end_watchdog()
 

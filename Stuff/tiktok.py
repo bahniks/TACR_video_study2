@@ -26,7 +26,15 @@ class TikTok:
         self.running = True
         self._stopped = False
 
-        self.instance2 = vlc.Instance('--vout=direct3d9')
+        self.instance2 = vlc.Instance(
+            '--aout=directsound',
+            '--avcodec-hw=none', 
+            '--no-video-title-show',
+            '--drop-late-frames',
+            '--skip-frames',
+            '--verbose=2',
+            '--intf=dummy'
+        )
         self.player2 = self.instance2.media_player_new()
         self.player2.set_hwnd(self.canvas.winfo_id())
 
@@ -54,20 +62,37 @@ class TikTok:
 
     def play_next_distraction_video(self):
         if self._stopped or not self.running or not self.distraction_videos or self.player2 is None:
+            print("DEBUG: TikTok playback stopped or invalid state")
             return
 
         try:
             self.player2.stop()
-        except Exception:
+        except Exception as e:
+            print(f"DEBUG: Error stopping TikTok player: {e}")
             return
 
         video_path = self.distraction_videos[self.current_distraction_index % len(self.distraction_videos)]
-        media2 = self.instance2.media_new(video_path)
-        self.player2.set_media(media2)
-        self.player2.audio_set_mute(True)
-        self.player2.play()
-        self.current_distraction_index += 1
-        self._save_index(self.current_distraction_index)
+        print(f"DEBUG: Playing TikTok video: {video_path} (index: {self.current_distraction_index})")
+        
+        try:
+            media2 = self.instance2.media_new(video_path)
+            self.player2.set_media(media2)
+            self.player2.audio_set_mute(True)
+            self.player2.play()
+            
+            # Check if playback started successfully
+            state = self.player2.get_state()
+            print(f"DEBUG: TikTok video state after play(): {state}")
+            
+            self.current_distraction_index += 1
+            self._save_index(self.current_distraction_index)
+        except Exception as e:
+            print(f"ERROR: Failed to play TikTok video: {e}")
+            # Try to recover by moving to next video
+            self.current_distraction_index += 1
+            self._save_index(self.current_distraction_index)
+            if self.current_distraction_index < len(self.distraction_videos):
+                self.canvas.after(1000, self.play_next_distraction_video)
 
     def stop(self):
         if self._stopped:
