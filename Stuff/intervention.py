@@ -3,9 +3,10 @@
 
 from tkinter import *
 from tkinter import ttk
-from time import sleep
+from time import sleep, perf_counter
 import os
 import random
+import vlc
 
 from Stuff.constants import TESTING
 from common import ExperimentFrame, InstructionsAndUnderstanding, InstructionsFrame
@@ -236,29 +237,99 @@ class IfThenPlanChooser(InstructionsFrame):
         self.next.invoke()
 
 
-class BoostVideo(Videos):
-    """Dedicated boost video frame that always plays boost.mp4."""
-    def getVideo(self):
-        return os.path.join(os.getcwd(), "Stuff", "Videos", "boost.mp4")
-
+class BoostVideo(ExperimentFrame):
+    """Dedicated boost video frame that always plays boost.mp4 with delayed start."""
+    
     def __init__(self, root):
         super().__init__(root)
-        # Pause immediately after the parent started playback, then resume after 1 s
-        self.player.pause()
-        self.after(1000, self.player.play)
+        self.root = root
+        self.video_path = os.path.join(os.getcwd(), "Stuff", "Videos", "boost.mp4")
+        self.playback_started = False
+
+        # Create tkinter canvas for video
+        self.canvas = Canvas(self, width=1200, height=674, background="white", highlightbackground="white", highlightcolor="white")
+        self.canvas.grid(column=1, row=1, sticky=(N, S, E, W))
+
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(2, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(2, weight=1)
+
+        # Import VLC instance
+        from videos import _vlc_instance
+        
+        # Initialize VLC player
+        self.player = _vlc_instance.media_player_new()
+
+        # Ensure the canvas window exists before giving its handle to VLC
+        self.update_idletasks()
+        self.canvas.update_idletasks()
+        self.player.set_hwnd(int(self.canvas.winfo_id()))
+
+        # Load the video file
+        media = _vlc_instance.media_new(self.video_path)
+        self.player.set_media(media)
+
+        # Bind the VLC event manager to detect when the video ends
+        self.event_manager = self.player.event_manager()
+        self.event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.on_video_end)
+
+        # Start video after 500ms delay instead of pause/resume
+        print("DEBUG: BoostVideo scheduling delayed start in 500ms")
+        self.after(500, self._start_boost_video)
+
+        ttk.Style().configure("TButton", font="helvetica 15")
+        self.next = ttk.Button(self, text="Pokračovat", command=self.stop)
+        self.next.grid(row=2, column=1)
+        if not TESTING:
+            self.next["state"] = "disabled"
+
+    def _start_boost_video(self):
+        """Start BoostVideo playback after 500ms delay"""
+        try:
+            print("DEBUG: BoostVideo starting playback")
+            play_result = self.player.play()
+            print(f"DEBUG: BoostVideo play result: {play_result}")
+            self.playback_started = True
+        except Exception as e:
+            print(f"ERROR: BoostVideo start failed: {e}")
 
     def on_video_end(self, event):
         """Hide the video canvas and reveal the next button when video ends."""
-        self.canvas.grid_remove()
+        print("DEBUG: BoostVideo ended, hiding canvas")
+        try:
+            self.canvas.grid_remove()
+        except Exception as e:
+            print(f"DEBUG: Error hiding BoostVideo canvas: {e}")
         self.next["state"] = "normal"
 
     def stop(self):
-        self.player.stop()
+        print("DEBUG: BoostVideo stop() called")
+        try:
+            # Stop player with proper cleanup
+            if hasattr(self, 'player') and self.player:
+                current_state = self.player.get_state()
+                print(f"DEBUG: BoostVideo stopping from state: {current_state}")
+                self.player.stop()
+                # Give time for VLC to clean up properly
+                sleep(0.1)
+        except Exception as e:
+            print(f"DEBUG: Error stopping BoostVideo player: {e}")
         self.nextFun()
 
     def gothrough(self):
-        self.stop()
-        return super(Videos, self).gothrough()
+        print("DEBUG: BoostVideo gothrough() called")
+        # Wait for playback to start if needed
+        deadline = perf_counter() + 3.0
+        while perf_counter() < deadline:
+            self.update()
+            if self.playback_started and self.player.get_state() == vlc.State.Playing:
+                break
+            sleep(0.05)
+        
+        # Continue normally
+        self.next["state"] = "normal"
+        self.next.invoke()
 
 
 BoostUnderstandingCheck = (InstructionsAndUnderstanding,

@@ -30,10 +30,21 @@ class TikTok:
         self._video_play_count = 0  # Track rapid video switching
         self._video_play_start_time = 0  # Track callback loop timing
 
-        # Use shared VLC instance from videos.py instead of creating new one
-        from videos import _vlc_instance
-        self.instance2 = _vlc_instance  # Share the global instance
-        print("DEBUG: TikTok using shared VLC instance")
+        # Create separate VLC instance for TikTok to avoid conflicts with main video
+        self.instance2 = vlc.Instance(
+            '--aout=directsound',
+            '--avcodec-hw=none',  # Disable hardware acceleration for TikTok to avoid conflicts
+            '--no-video-title-show',
+            '--drop-late-frames',
+            '--skip-frames',
+            '--verbose=0',  # Reduce logging for TikTok
+            '--intf=dummy',
+            '--vout=win32',  # Use Win32 GDI instead of DirectX to avoid conflicts
+            '--avcodec-skiploopfilter=all',
+            '--network-caching=300',
+            '--file-caching=300',
+        )
+        print("DEBUG: TikTok using separate VLC instance (Win32 output, no HW accel)")
         
         self.player2 = self.instance2.media_player_new()
         self.player2.set_hwnd(self.canvas.winfo_id())
@@ -41,6 +52,12 @@ class TikTok:
         self.event_manager2 = self.player2.event_manager()
         self.event_manager2.event_attach(vlc.EventType.MediaPlayerEndReached, self.on_distraction_video_end)
 
+        # Don't start playing immediately - wait for explicit play() call
+        print("DEBUG: TikTok initialized, waiting for play() call")
+
+    def play(self):
+        """Start TikTok playback when called (delayed from main video startup)"""
+        print("DEBUG: TikTok play() called, starting first video")
         self.play_next_distraction_video()
 
     def _is_widget_alive(self, widget):
@@ -193,20 +210,29 @@ class TikTok:
                 # Stop player with timeout protection
                 current_state = self.player2.get_state()
                 if current_state not in (vlc.State.NothingSpecial, vlc.State.Stopped):
+                    print(f"DEBUG: Stopping TikTok player from state: {current_state}")
                     self.player2.stop()
                     
-                # Give VLC time to stop cleanly
-                time.sleep(0.1)
+                # Give VLC time to stop cleanly and release resources
+                time.sleep(0.2)  # Increased wait time for thorough cleanup
                 
             except Exception as e:
                 print(f"DEBUG: Error during TikTok cleanup: {e}")
             finally:
-                # Don't clear shared instance, only the player
+                # Clean up separate VLC instance thoroughly
                 self.player2 = None
                 self.event_manager2 = None
-
-    def play(self):
-        return
+                if hasattr(self, 'instance2') and self.instance2:
+                    try:
+                        print("DEBUG: Releasing TikTok VLC instance...")
+                        # Force cleanup of any pending operations
+                        time.sleep(0.1)
+                        self.instance2.release()
+                        print("DEBUG: TikTok VLC instance released")
+                    except Exception as e:
+                        print(f"DEBUG: Error releasing TikTok VLC instance: {e}")
+                    finally:
+                        self.instance2 = None
 
     def get_distraction_videos(self):
         distractions_path = os.path.join(os.getcwd(), "Stuff", "Distractions")

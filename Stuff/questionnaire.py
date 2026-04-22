@@ -359,19 +359,53 @@ class BlockQuestionnaire(InstructionsFrame):
             self.next["state"] = "!disabled"
 
     def gothrough(self):
-        self.goingThrough = True
+        if not hasattr(self, 'goingThrough'):
+            self.goingThrough = True
+            
+        # Safety check: ensure widget still exists
+        if not self.winfo_exists():
+            return
+            
+        # Only proceed if we're still in the going-through state
+        if not self.goingThrough:
+            return
+            
+        print(f"DEBUG: BlockQuestionnaire gothrough - page {self.mnumber}/{len(self.questions)}, measures: {len(self.measures)}")
+            
         for m in self.measures:
             choice = random.randint(1, self.options)
             m.answer.set(str(choice))
-        self.next["state"] = "!disabled"
-        self.update()
-        sleep(0.5)
-        self.next.invoke()
-        if not self.mnumber == len(self.questions) and self.goingThrough:
+            
+        # Safety check before accessing button
+        if self.winfo_exists() and hasattr(self, 'next') and self.next.winfo_exists():
+            self.next["state"] = "!disabled"
+            self.update()
+            sleep(0.5)
+            
+            # Check if we need to continue to next page BEFORE invoking next
+            has_more_questions = self.mnumber < len(self.questions)
+            
+            # Click next to advance to next page (or finish questionnaire)
+            self.next.invoke()
+            
+            # If there are more questions, schedule gothrough for the new page after a delay
+            if has_more_questions and self.goingThrough:
+                print("DEBUG: BlockQuestionnaire scheduling gothrough for next page")
+                # Delay the recursive call to allow the new page to fully initialize
+                self.after(100, self._continue_gothrough)
+            else:
+                # End the gothrough process cleanly
+                print("DEBUG: BlockQuestionnaire gothrough completed")
+                self.goingThrough = False
+
+    def _continue_gothrough(self):
+        """Continue gothrough on the next page after initialization delay"""
+        if self.goingThrough and self.winfo_exists():
+            print("DEBUG: BlockQuestionnaire continuing gothrough on new page")
             self.gothrough()
         else:
+            print("DEBUG: BlockQuestionnaire gothrough cancelled or widget destroyed")
             self.goingThrough = False
-            self.gothrough()
 
 
 

@@ -219,8 +219,15 @@ class InstructionsFrame(ExperimentFrame):
         #self.update()
         if self.wait > 0:
             sleep(self.wait)
-        self.focus_force()
-        if self.proceedB:
+            
+        # Safety check before attempting focus
+        if self.winfo_exists():
+            try:
+                self.focus_force()
+            except Exception as e:
+                print(f"DEBUG: Focus force failed: {e}")
+                
+        if self.proceedB and hasattr(self, 'next') and self.next.winfo_exists():
             self.next.invoke()
         elif self.keys:
             key = self.keys[0]
@@ -641,7 +648,14 @@ class InstructionsAndUnderstanding(InstructionsFrame):
         for i in range(len(self.controlTexts)):
             sleep(0.1)
             self.update()
-            self.focus_force()
+            
+            # Safety check before attempting focus
+            if self.winfo_exists():
+                try:
+                    self.focus_force()
+                except Exception as e:
+                    print(f"DEBUG: Focus force failed in control questions: {e}")
+                    
             num_options = len(self.controlTexts[i][1])
             option = random.randint(0, num_options - 1)
             self.update()
@@ -649,16 +663,24 @@ class InstructionsAndUnderstanding(InstructionsFrame):
             self.controlQuestion.radios[option].invoke()
             self.update()
             sleep(0.1)
-            self.focus_force()
+            
+            # Safety check before attempting focus
+            if self.winfo_exists():
+                try:
+                    self.focus_force()
+                except Exception as e:
+                    print(f"DEBUG: Focus force failed in control questions: {e}")
+                    
             # first click: show feedback (if enabled) or proceed immediately if not
-            self.next.invoke()
-            self.update()
-            sleep(0.1)
-            # if feedback is shown, click Next again to advance to the next question
-            if self.showFeedback:
+            if hasattr(self, 'next') and self.next.winfo_exists():
                 self.next.invoke()
                 self.update()
-                sleep(0.05)
+                sleep(0.1)
+                # if feedback is shown, click Next again to advance to the next question
+                if self.showFeedback:
+                    self.next.invoke()
+                    self.update()
+                    sleep(0.05)
 
 
 class OneFrame(Canvas):

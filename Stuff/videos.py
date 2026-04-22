@@ -214,15 +214,22 @@ class Videos2(ExperimentFrame):
             "game": Game,
             "control": Empty
         }
+        
+        # Create right content but delay TikTok startup to avoid hardware conflicts
         if self.content_type == "game":
             self.right_content = content_map[self.content_type](self.canvas2, width=480, height=854, owner=self)
+            self.right_content.play()
         elif self.content_type == "tiktok":
+            # Create TikTok but don't start it yet - wait for main video to initialize
             self.right_content = content_map[self.content_type](self.canvas2, width=480, height=854, owner=self)
+            # TikTok will be started in _start_video_playback after main video succeeds
+            print("DEBUG: TikTok content created, delaying startup until main video initializes")
         elif self.content_type == "chat":
             self.right_content = content_map[self.content_type](self.canvas2, width=480, height=854, root = self.root)
+            self.right_content.play()
         else:
             self.right_content = content_map[self.content_type](self.canvas2, width=480, height=854)
-        self.right_content.play()
+            self.right_content.play()
 
         ttk.Style().configure("TButton", font="helvetica 15")
         self.next = ttk.Button(self, text="Pokračovat", command=self.stop)
@@ -288,17 +295,64 @@ class Videos2(ExperimentFrame):
                 self.focusTime += self.focusToggle[-1] - self.focusToggle[-2]
             self.focusProportion = self.focusTime / (self.focusToggle[-1] - self.focusToggle[0])
             self.file.write("Focus time\t{}\t{}\t{}\t{}\t{}\t{}\n\n".format(self.id, self.root.status["videoNumber"], self.content_type, self.focusTime, self.focusProportion, "|".join(map(str, self.focusToggle))))
-        self.player.stop()
-        self.right_content.stop()
-        for child in self.canvas2.winfo_children():
-            child.destroy()
-        self.canvas2.delete("all")
+        
+        print(f"DEBUG: Stopping main player and right content ({self.content_type})")
+        
+        # Stop main player first and wait for DirectX cleanup
+        try:
+            main_state = self.player.get_state()
+            print(f"DEBUG: Stopping main player from state: {main_state}")
+            self.player.stop()
+            if self.content_type == "tiktok":
+                print("DEBUG: Waiting for main video DirectX cleanup before stopping TikTok...")
+                sleep(0.4)  # Extra time for DirectX resource cleanup when TikTok is involved
+            else:
+                sleep(0.1)
+        except Exception as e:
+            print(f"DEBUG: Error stopping main player: {e}")
+        
+        # Stop right content (TikTok/Chat/Game) with staggered timing to avoid DirectX conflicts
+        try:
+            print(f"DEBUG: Stopping right content: {self.content_type}")
+            self.right_content.stop()
+            if self.content_type == "tiktok":
+                print("DEBUG: Waiting for TikTok VLC cleanup...")
+                # Give TikTok VLC instance time to fully shut down
+                sleep(0.5)  # Increased wait for TikTok DirectX cleanup
+        except Exception as e:
+            print(f"DEBUG: Error stopping right content: {e}")
+        
+        # Clean up canvas widgets safely
+        print(f"DEBUG: Cleaning up canvas widgets")
+        try:
+            for child in self.canvas2.winfo_children():
+                child.destroy()
+        except Exception as e:
+            print(f"DEBUG: Error destroying canvas children: {e}")
+            
+        try:
+            self.canvas2.delete("all")
+        except Exception as e:
+            print(f"DEBUG: Error clearing canvas: {e}")
+            
+        # Handle canvas display based on content type
         if self.content_type == "tiktok":
-            # Hide the whole right panel to avoid a lingering black VLC surface.
-            self.canvas2.grid_remove()
+            print("DEBUG: Hiding TikTok canvas to avoid VLC surface issues")
+            try:
+                # Hide the whole right panel to avoid a lingering black VLC surface.
+                self.canvas2.grid_remove()
+            except Exception as e:
+                print(f"DEBUG: Error hiding TikTok canvas: {e}")
         else:
-            self.canvas2.configure(background="white")
-            self.canvas2.update()
+            print("DEBUG: Resetting canvas background")
+            try:
+                self.canvas2.configure(background="white")
+                # Don't call update() immediately after TikTok cleanup - it can cause hangs
+                # self.canvas2.update()
+            except Exception as e:
+                print(f"DEBUG: Error configuring canvas background: {e}")
+                
+        print("DEBUG: Playback cleanup completed")
         self.playback_cleanup_done = True
 
     def _start_video_playback(self):
@@ -334,9 +388,29 @@ class Videos2(ExperimentFrame):
             # Start watchdog
             self._schedule_end_watchdog()
             
+            # Start TikTok after main video has successfully started to avoid hardware conflicts
+            if self.content_type == "tiktok":
+                print("DEBUG: Main video started, now starting TikTok after delay...")
+                self.after(1500, self._start_delayed_tiktok)  # 1.5s delay to let main video stabilize
+            
         except Exception as e:
             print(f"ERROR: Video startup failed: {e}")
             self._handle_video_end()
+
+    def _start_delayed_tiktok(self):
+        """Start TikTok playback after main video has stabilized"""
+        try:
+            if self.content_type == "tiktok" and hasattr(self, 'right_content'):
+                main_state = self.player.get_state()
+                print(f"DEBUG: Starting delayed TikTok, main video state: {main_state}")
+                if main_state == vlc.State.Playing:
+                    self.right_content.play()
+                    print("DEBUG: TikTok started successfully after main video")
+                else:
+                    print(f"WARNING: Main video not playing ({main_state}), starting TikTok anyway")
+                    self.right_content.play()
+        except Exception as e:
+            print(f"ERROR: Failed to start delayed TikTok: {e}")
 
     def _schedule_end_watchdog(self):
         if self.end_watchdog_job is not None:
