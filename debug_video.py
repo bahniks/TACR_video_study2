@@ -19,11 +19,14 @@ class VideoDebugger:
     def __init__(self, test_duration=15):
         self.test_duration = test_duration  # Test for only 15 seconds
         self.root = Tk()
-        self.root.title("Video Debug - Dual Playback Test")
+        self.root.title("Video Debug - Enhanced Experiment Simulation")
         self.root.geometry("1400x800")
         
         # Test configuration
         self.use_single_instance = True  # Toggle this to test dual vs single instance
+        self.simulate_boost_video = True  # Toggle BoostVideo pause/resume behavior
+        self.use_gothrough_timing = True  # Toggle gothrough timing patterns
+        
         self.main_player = None
         self.tiktok_player = None
         self.vlc_instance = None
@@ -31,10 +34,15 @@ class VideoDebugger:
         self.test_start_time = None
         self.freeze_detected = False
         
+        # Event managers for proper cleanup
+        self.main_event_manager = None
+        self.tiktok_event_manager = None
+        
         # Debug tracking
         self.main_state_history = []
         self.tiktok_state_history = []
         self.error_count = 0
+        self.gothrough_active = False
         
         self.setup_ui()
         self.setup_vlc()
@@ -103,8 +111,24 @@ class VideoDebugger:
         self.start_btn = ttk.Button(button_frame, text="Start Test", command=self.start_test)
         self.start_btn.pack(fill=X, pady=2)
         
+        self.gothrough_btn = ttk.Button(button_frame, text="Test gothrough()", command=self.test_gothrough, state="disabled")
+        self.gothrough_btn.pack(fill=X, pady=2)
+        
         self.stop_btn = ttk.Button(button_frame, text="Stop Test", command=self.stop_test, state="disabled")
         self.stop_btn.pack(fill=X, pady=2)
+        
+        # Test mode toggles
+        ttk.Label(status_frame, text="Test Modes", font=("Arial", 10, "bold")).pack(pady=(10,0))
+        
+        self.boost_var = BooleanVar(value=self.simulate_boost_video)
+        self.boost_check = ttk.Checkbutton(status_frame, text="Simulate BoostVideo pause/resume", 
+                                         variable=self.boost_var)
+        self.boost_check.pack(anchor=W)
+        
+        self.gothrough_var = BooleanVar(value=self.use_gothrough_timing) 
+        self.gothrough_timing_check = ttk.Checkbutton(status_frame, text="Use gothrough() timing patterns",
+                                                    variable=self.gothrough_var)
+        self.gothrough_timing_check.pack(anchor=W)
         
         ttk.Button(button_frame, text="Close", command=self.cleanup_and_exit).pack(fill=X, pady=2)
         
@@ -150,11 +174,18 @@ class VideoDebugger:
         """Start the dual video test"""
         self.start_btn.config(state="disabled")
         self.stop_btn.config(state="normal")
+        self.gothrough_btn.config(state="normal")
         self.test_start_time = time.time()
         self.freeze_detected = False
         self.error_count = 0
         
+        # Update test modes from UI
+        self.simulate_boost_video = self.boost_var.get()
+        self.use_gothrough_timing = self.gothrough_var.get()
+        
         self.log_error(f"Starting {self.test_duration}s test...")
+        self.log_error(f"BoostVideo simulation: {self.simulate_boost_video}")
+        self.log_error(f"gothrough() timing: {self.use_gothrough_timing}")
         
         try:
             self.setup_main_video()
@@ -164,18 +195,67 @@ class VideoDebugger:
             self.log_error(f"✗ Test setup failed: {e}")
             self.stop_test()
             
+    def test_gothrough(self):
+        """Test the gothrough() method specifically"""
+        if not self.main_player:
+            self.log_error("No main player - start test first")
+            return
+            
+        self.log_error("Testing gothrough() method...")
+        self.gothrough_active = True
+        
+        # Replicate exact gothrough timing from Videos2
+        from time import perf_counter, sleep
+        
+        deadline = perf_counter() + 4.0
+        playback_started = False
+        
+        self.log_error("gothrough: Starting 4s deadline loop...")
+        
+        while perf_counter() < deadline:
+            self.root.update()  # This is the key difference - GUI updates in loop
+            
+            try:
+                state = self.main_player.get_state()
+                if playback_started or state == vlc.State.Playing:
+                    playback_started = True
+                    self.log_error(f"gothrough: Playback started - state: {state}")
+                    break
+            except Exception as e:
+                self.log_error(f"gothrough: Error checking state: {e}")
+                
+            sleep(0.05)  # 50ms sleep like real gothrough
+            
+        if playback_started:
+            end_time = perf_counter() + 1.5
+            self.log_error("gothrough: Starting 1.5s end loop...")
+            
+            while perf_counter() < end_time:
+                self.root.update()
+                sleep(0.05)
+                
+        self.log_error("gothrough: Complete")
+        self.gothrough_active = False
+            
     def setup_main_video(self):
-        """Setup main video player (like Videos2)"""
+        """Setup main video player (like Videos/BoostVideo)"""
         videos_dir = os.path.join(os.getcwd(), "Stuff", "Videos")
         video_files = [f for f in os.listdir(videos_dir) if f.endswith('.mp4')]
         
         if not video_files:
             raise Exception("No video files found")
             
-        video_path = os.path.join(videos_dir, video_files[0])
-        self.log_error(f"Loading main video: {video_files[0]}")
+        # Use boost.mp4 if simulating BoostVideo, otherwise first video
+        if self.simulate_boost_video and 'boost.mp4' in video_files:
+            video_file = 'boost.mp4'
+            self.log_error("Using boost.mp4 (BoostVideo simulation)")
+        else:
+            video_file = video_files[0]
+            
+        video_path = os.path.join(videos_dir, video_file)
+        self.log_error(f"Loading main video: {video_file}")
         
-        # Wait for canvas to be ready
+        # Exact replication of Videos.__init__ sequence
         self.root.update_idletasks()
         self.main_canvas.update_idletasks()
         
@@ -185,9 +265,10 @@ class VideoDebugger:
         # Create player
         self.main_player = self.vlc_instance.media_player_new()
         
-        # Set canvas
+        # Set canvas HWND
         try:
-            self.main_player.set_hwnd(int(self.main_canvas.winfo_id()))
+            canvas_id = int(self.main_canvas.winfo_id())
+            self.main_player.set_hwnd(canvas_id)
             self.log_error("✓ Main canvas HWND set")
         except Exception as e:
             self.log_error(f"✗ Main canvas HWND failed: {e}")
@@ -196,12 +277,40 @@ class VideoDebugger:
         media = self.vlc_instance.media_new(video_path)
         self.main_player.set_media(media)
         
+        # Bind event manager (like real Videos class)
+        self.main_event_manager = self.main_player.event_manager()
+        self.main_event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.on_main_video_end)
+        
         # Start playback
         result = self.main_player.play()
         self.log_error(f"Main video play() result: {result}")
         
+        # BoostVideo specific behavior: pause immediately, resume after 1s
+        if self.simulate_boost_video:
+            self.log_error("BoostVideo: Pausing immediately after play()")
+            pause_result = self.main_player.pause()
+            self.log_error(f"BoostVideo: Pause result: {pause_result}")
+            
+            # Schedule resume after 1000ms (like real BoostVideo)
+            self.root.after(1000, self.boost_video_resume)
+            
+    def boost_video_resume(self):
+        """Resume BoostVideo playback after 1s delay"""
+        if self.main_player:
+            self.log_error("BoostVideo: Resuming playback after 1s delay")
+            try:
+                resume_result = self.main_player.play()
+                state = self.main_player.get_state()
+                self.log_error(f"BoostVideo: Resume result: {resume_result}, state: {state}")
+            except Exception as e:
+                self.log_error(f"BoostVideo: Resume failed: {e}")
+                
+    def on_main_video_end(self, event):
+        """Main video end callback (like real Videos class)"""
+        self.log_error("Main video ended via callback")
+        
     def setup_tiktok_video(self):
-        """Setup TikTok distraction player"""
+        """Setup TikTok distraction player with proper event management"""
         distractions_dir = os.path.join(os.getcwd(), "Stuff", "Distractions") 
         
         if not os.path.exists(distractions_dir):
@@ -218,20 +327,25 @@ class VideoDebugger:
         video_path = os.path.join(distractions_dir, random.choice(video_files))
         self.log_error(f"Loading TikTok video: {os.path.basename(video_path)}")
         
-        # Wait for canvas
+        # Exact replication of TikTok.__init__ sequence
         self.root.update_idletasks()
         self.tiktok_canvas.update_idletasks()
         
         # Create player
         self.tiktok_player = self.vlc_instance2.media_player_new()
         
-        # Set canvas
+        # Set canvas HWND
         try:
-            self.tiktok_player.set_hwnd(int(self.tiktok_canvas.winfo_id()))
+            canvas_id = int(self.tiktok_canvas.winfo_id())
+            self.tiktok_player.set_hwnd(canvas_id)
             self.log_error("✓ TikTok canvas HWND set")
         except Exception as e:
             self.log_error(f"✗ TikTok canvas HWND failed: {e}")
             
+        # Bind event manager (like real TikTok class)
+        self.tiktok_event_manager = self.tiktok_player.event_manager()
+        self.tiktok_event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.on_tiktok_video_end)
+        
         # Load media and start
         media = self.vlc_instance2.media_new(video_path)
         self.tiktok_player.set_media(media)
@@ -239,6 +353,23 @@ class VideoDebugger:
         
         result = self.tiktok_player.play()
         self.log_error(f"TikTok video play() result: {result}")
+        
+    def on_tiktok_video_end(self, event):
+        """TikTok video end callback - this is where threading issues occur!"""
+        self.log_error("TikTok video ended via callback (THREADING CONTEXT!)")
+        
+        # This is the exact code that causes threading issues in the real TikTok class
+        try:
+            # Simulate the problematic _is_widget_alive check from real TikTok
+            if hasattr(self.tiktok_canvas, 'winfo_id'):
+                # Schedule next video like real TikTok (this can cause threading issues)
+                self.root.after(0, self.play_next_tiktok_video)
+        except Exception as e:
+            self.log_error(f"TikTok callback error: {e}")
+            
+    def play_next_tiktok_video(self):
+        """Simulate playing next TikTok video (simplified)"""
+        self.log_error("TikTok: Playing next video (scheduled from callback)")
         
     def start_monitoring(self):
         """Start monitoring video states"""
@@ -254,7 +385,7 @@ class VideoDebugger:
             return
             
         # Update time display
-        self.time_status.config(text=f"Time: {current_time:.1f}s")
+        self.time_status.config(text=f"Time: {current_time:.1f}s {'(gothrough)' if self.gothrough_active else ''}")
         
         # Check main video
         if self.main_player:
@@ -265,17 +396,24 @@ class VideoDebugger:
                 
                 self.main_state_history.append((current_time, main_state, main_time))
                 
-                # Update status
+                # Enhanced status with BoostVideo detection
+                boost_info = " (BoostVideo)" if self.simulate_boost_video else ""
+                
                 if main_state == vlc.State.Playing:
-                    self.main_status.config(text=f"Main: Playing ({main_time}ms)", background="lightgreen")
+                    self.main_status.config(text=f"Main: Playing ({main_time}ms){boost_info}", background="lightgreen")
                 elif main_state == vlc.State.Paused:
-                    self.main_status.config(text=f"Main: PAUSED ({main_time}ms)", background="orange")
-                    self.log_error(f"WARNING: Main video paused at {current_time:.1f}s")
+                    self.main_status.config(text=f"Main: PAUSED ({main_time}ms){boost_info}", background="orange")
+                    if current_time > 2.0:  # Only warn if not expected BoostVideo pause
+                        self.log_error(f"WARNING: Main video paused at {current_time:.1f}s")
                 elif main_state == vlc.State.Error:
-                    self.main_status.config(text="Main: ERROR", background="red")
+                    self.main_status.config(text=f"Main: ERROR{boost_info}", background="red")
                     self.log_error(f"ERROR: Main video error at {current_time:.1f}s")
                 else:
-                    self.main_status.config(text=f"Main: {main_state}", background="yellow")
+                    self.main_status.config(text=f"Main: {main_state}{boost_info}", background="yellow")
+                    
+                # Detect BoostVideo specific issues
+                if self.simulate_boost_video and current_time > 1.5 and main_state == vlc.State.Paused:
+                    self.log_error(f"BoostVideo: Still paused after resume time at {current_time:.1f}s")
                     
             except Exception as e:
                 self.log_error(f"Main video monitor error: {e}")
@@ -293,23 +431,41 @@ class VideoDebugger:
                     self.tiktok_status.config(text=f"TikTok: Playing ({tiktok_time}ms)", background="lightgreen")
                 elif tiktok_state == vlc.State.Paused:
                     self.tiktok_status.config(text=f"TikTok: PAUSED ({tiktok_time}ms)", background="orange")
+                    self.log_error(f"WARNING: TikTok video paused at {current_time:.1f}s")
                 elif tiktok_state == vlc.State.Error:
                     self.tiktok_status.config(text="TikTok: ERROR", background="red")
                     self.log_error(f"ERROR: TikTok video error at {current_time:.1f}s")
+                elif tiktok_state == vlc.State.Ended:
+                    self.tiktok_status.config(text="TikTok: ENDED (testing callback)", background="cyan")
+                    self.log_error(f"TikTok video ended at {current_time:.1f}s - callback should trigger")
                 else:
                     self.tiktok_status.config(text=f"TikTok: {tiktok_state}", background="yellow")
                     
             except Exception as e:
                 self.log_error(f"TikTok video monitor error: {e}")
         
-        # Schedule next check
-        self.root.after(200, self.monitor_videos)  # Check every 200ms
+        # Schedule next check (faster during gothrough for better detection)
+        check_interval = 100 if self.gothrough_active else 200
+        self.root.after(check_interval, self.monitor_videos)
         
     def stop_test(self):
         """Stop the test and cleanup"""
         self.log_error("Stopping test...")
         
         try:
+            # Proper cleanup like real classes
+            if self.main_event_manager and self.main_player:
+                try:
+                    self.main_event_manager.event_detach(vlc.EventType.MediaPlayerEndReached)
+                except Exception as e:
+                    self.log_error(f"Main event detach error: {e}")
+                    
+            if self.tiktok_event_manager and self.tiktok_player:
+                try:
+                    self.tiktok_event_manager.event_detach(vlc.EventType.MediaPlayerEndReached)
+                except Exception as e:
+                    self.log_error(f"TikTok event detach error: {e}")
+            
             if self.main_player:
                 self.main_player.stop()
                 self.main_player = None
@@ -318,11 +474,15 @@ class VideoDebugger:
                 self.tiktok_player.stop() 
                 self.tiktok_player = None
                 
+            self.main_event_manager = None
+            self.tiktok_event_manager = None
+                
         except Exception as e:
             self.log_error(f"Cleanup error: {e}")
             
         self.start_btn.config(state="normal")
         self.stop_btn.config(state="disabled")
+        self.gothrough_btn.config(state="disabled")
         
         self.main_status.config(text="Main: Stopped", background="lightgray")
         self.tiktok_status.config(text="TikTok: Stopped", background="lightgray")
@@ -331,7 +491,7 @@ class VideoDebugger:
         self.generate_summary()
         
     def generate_summary(self):
-        """Generate test summary"""
+        """Generate test summary with experiment-specific analysis"""
         self.log_error("\n" + "="*30)
         self.log_error("TEST SUMMARY")
         self.log_error("="*30)
@@ -341,14 +501,37 @@ class VideoDebugger:
         tiktok_issues = sum(1 for _, state, _ in self.tiktok_state_history 
                            if state in (vlc.State.Paused, vlc.State.Error))
         
-        self.log_error(f"Main video issues: {main_issues}")
-        self.log_error(f"TikTok video issues: {tiktok_issues}")
-        self.log_error(f"Total errors logged: {self.error_count}")
+        self.log_error(f"Test configuration:")
+        self.log_error(f"  - Single VLC instance: {self.use_single_instance}")
+        self.log_error(f"  - BoostVideo simulation: {self.simulate_boost_video}")
+        self.log_error(f"  - gothrough() timing: {self.use_gothrough_timing}")
+        self.log_error(f"")
+        self.log_error(f"Results:")
+        self.log_error(f"  - Main video issues: {main_issues}")
+        self.log_error(f"  - TikTok video issues: {tiktok_issues}")
+        self.log_error(f"  - Total errors logged: {self.error_count}")
         
+        # Specific experimental condition analysis
+        if self.simulate_boost_video:
+            boost_pause_issues = sum(1 for t, state, _ in self.main_state_history 
+                                   if t > 1.5 and state == vlc.State.Paused)
+            self.log_error(f"  - BoostVideo pause issues: {boost_pause_issues}")
+            
         if main_issues == 0 and tiktok_issues == 0:
             self.log_error("✓ No playback issues detected!")
+            self.log_error("  This suggests the threading fixes are working")
         else:
-            self.log_error("⚠ Issues detected - check logs above")
+            self.log_error("⚠ Issues detected - these match experiment conditions")
+            self.log_error("  Try testing with different configuration toggles")
+            
+        self.log_error("\nRecommendations:")
+        if main_issues > 0:
+            self.log_error("  - Main video issues suggest VLC initialization problems")
+            if self.simulate_boost_video:
+                self.log_error("  - BoostVideo pause/resume pattern may be causing issues")
+        if tiktok_issues > 0:
+            self.log_error("  - TikTok issues suggest threading/callback problems")
+            self.log_error("  - Check if shared VLC instance helps (toggle setting)")
             
     def log_error(self, message):
         """Log error/debug message"""
@@ -372,10 +555,15 @@ class VideoDebugger:
 
 
 def main():
-    """Run the enhanced video debugger"""
-    print("Enhanced Video Debugger - Videos2 Scenario")
-    print("Testing dual video playback with 15-second duration")
-    print("Focus on startup/ending issues and threading problems")
+    """Run the enhanced video debugger that replicates experiment conditions"""
+    print("Enhanced Video Debugger - Experiment Condition Replication")
+    print("="*60)
+    print("Features:")
+    print("- BoostVideo pause/resume pattern simulation")
+    print("- gothrough() timing loop replication")  
+    print("- VLC event callback threading tests")
+    print("- Single vs dual VLC instance comparison")
+    print("- 15-second focused testing duration")
     print("="*60)
     
     debugger = VideoDebugger(test_duration=15)
