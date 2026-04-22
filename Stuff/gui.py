@@ -36,7 +36,18 @@ class GUI(Tk):
         #self.screenwidth = 1920
         #self.screenheight = 1080
 
-        os.chdir(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+        # Ensure we're in the project root directory
+        # Try to find the project root by looking for experiment.pyw
+        current_dir = os.getcwd()
+        if not os.path.exists(os.path.join(current_dir, "experiment.pyw")):
+            # We're likely in the Stuff directory, go up one level
+            parent_dir = os.path.dirname(current_dir)
+            if os.path.exists(os.path.join(parent_dir, "experiment.pyw")):
+                os.chdir(parent_dir)
+                current_dir = parent_dir
+        
+        print(f"GUI working directory set to: {os.getcwd()}")
+        
         filepath = os.path.join(os.getcwd(), "Data")
         if not os.path.exists(filepath):
             os.mkdir(filepath)
