@@ -12,7 +12,6 @@ from gui import GUI
 
 
 class Chat:
-    _chat_order = None  # shuffled [chatA.txt, chatB.txt], initialised once
     _chat_index = 0     # index of the next chat to show
 
     # Configuration parameters
@@ -59,8 +58,9 @@ class Chat:
         "message_row_padx": 4,
     }
     
-    def __init__(self, canvas, width=None, height=None):
+    def __init__(self, canvas, width=None, height=None, root=None):
         self.canvas = canvas
+        self.root = root if root is not None else canvas.winfo_toplevel()
         self.width = width if width is not None else self.CONFIG["canvas_width"]
         self.height = height if height is not None else self.CONFIG["canvas_height"]
 
@@ -147,14 +147,12 @@ class Chat:
         return {"s1": sampled[0], "s2": sampled[1]}
 
     def _select_next_chat_file(self):
-        if Chat._chat_order is None:
-            Chat._chat_order = ["chatA.txt", "chatB.txt"]
-            random.shuffle(Chat._chat_order)
+        chat_order = self.root.status.get("chat_order", ["chatA.txt", "chatB.txt"])
 
-        if Chat._chat_index >= len(Chat._chat_order):
+        if Chat._chat_index >= len(chat_order):
             return None
 
-        filename = Chat._chat_order[Chat._chat_index]
+        filename = chat_order[Chat._chat_index]
         Chat._chat_index += 1
         chats_path = os.path.join(os.getcwd(), "Stuff", "Chats")
         return os.path.join(chats_path, filename)
@@ -424,7 +422,7 @@ class ChatTest(ExperimentFrame):
         canvas = Canvas(self, width=canvas_width, height=canvas_height, background=bg_color, highlightbackground=bg_color, highlightcolor=bg_color)
         canvas.grid(row=0, column=0)
 
-        self.chat = Chat(canvas, width=canvas_width, height=canvas_height)
+        self.chat = Chat(canvas, width=canvas_width, height=canvas_height, root=self.root)
         self.chat.play()
 
     def stop(self):

@@ -66,6 +66,8 @@ class Login(InstructionsFrame):
         random.shuffle(self.root.status["distractions1"])
         random.shuffle(self.root.status["distractions2"])        
         self.root.status["distractions"] = self.root.status["distractions1"] + self.root.status["distractions2"]             
+        self.root.status["chat_order"] = ["chatA.txt", "chatB.txt"]
+        random.shuffle(self.root.status["chat_order"])
 
     def write(self):
         self.file.write("Login" + "\n")
