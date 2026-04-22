@@ -5,6 +5,7 @@ from tkinter import *
 import os
 import random
 import vlc
+import time
 
 from common import ExperimentFrame
 from gui import GUI
@@ -26,15 +27,11 @@ class TikTok:
         self.running = True
         self._stopped = False
 
-        self.instance2 = vlc.Instance(
-            '--aout=directsound',
-            '--avcodec-hw=none', 
-            '--no-video-title-show',
-            '--drop-late-frames',
-            '--skip-frames',
-            '--verbose=2',
-            '--intf=dummy'
-        )
+        # Use shared VLC instance from videos.py instead of creating new one
+        from videos import _vlc_instance
+        self.instance2 = _vlc_instance  # Share the global instance
+        print("DEBUG: TikTok using shared VLC instance")
+        
         self.player2 = self.instance2.media_player_new()
         self.player2.set_hwnd(self.canvas.winfo_id())
 
@@ -47,17 +44,21 @@ class TikTok:
         if widget is None:
             return False
         try:
-            return bool(widget.winfo_exists())
-        except TclError:
+            # Use a simple existence check instead of Tkinter calls
+            return hasattr(widget, 'winfo_id') and not self._stopped
+        except (TclError, RuntimeError, AttributeError):
             return False
 
 
     def on_distraction_video_end(self, event):
-        if self._stopped or not self.running or not self._is_widget_alive(self.canvas):
+        # Thread-safe check using simple boolean flags
+        if self._stopped or not self.running:
             return
         try:
-            self.canvas.after(0, self.play_next_distraction_video)
-        except TclError:
+            # Schedule the next video in the main thread
+            if hasattr(self.canvas, 'after'):
+                self.canvas.after(0, self.play_next_distraction_video)
+        except (TclError, RuntimeError, AttributeError):
             return
 
     def play_next_distraction_video(self):
@@ -65,8 +66,22 @@ class TikTok:
             print("DEBUG: TikTok playback stopped or invalid state")
             return
 
+        # Additional safety check for GUI state
         try:
-            self.player2.stop()
+            if not hasattr(self.canvas, 'winfo_id'):
+                print("DEBUG: Canvas not ready for video playback")
+                return
+        except (TclError, RuntimeError, AttributeError):
+            print("DEBUG: Canvas unavailable, stopping TikTok playback")
+            return
+
+        try:
+            # Stop previous video with timeout protection
+            current_state = self.player2.get_state()
+            if current_state not in (vlc.State.NothingSpecial, vlc.State.Stopped):
+                self.player2.stop()
+                # Give VLC time to stop cleanly
+                time.sleep(0.1)
         except Exception as e:
             print(f"DEBUG: Error stopping TikTok player: {e}")
             return
@@ -78,11 +93,19 @@ class TikTok:
             media2 = self.instance2.media_new(video_path)
             self.player2.set_media(media2)
             self.player2.audio_set_mute(True)
-            self.player2.play()
+            
+            # Ensure canvas is still valid before playing
+            if hasattr(self.canvas, 'winfo_id'):
+                self.player2.set_hwnd(self.canvas.winfo_id())
+            else:
+                print("DEBUG: Canvas no longer available")
+                return
+                
+            play_result = self.player2.play()
             
             # Check if playback started successfully
             state = self.player2.get_state()
-            print(f"DEBUG: TikTok video state after play(): {state}")
+            print(f"DEBUG: TikTok video state after play(): {state}, play result: {play_result}")
             
             self.current_distraction_index += 1
             self._save_index(self.current_distraction_index)
@@ -92,21 +115,46 @@ class TikTok:
             self.current_distraction_index += 1
             self._save_index(self.current_distraction_index)
             if self.current_distraction_index < len(self.distraction_videos):
-                self.canvas.after(1000, self.play_next_distraction_video)
+                # Use longer delay for recovery
+                try:
+                    self.canvas.after(2000, self.play_next_distraction_video)
+                except (TclError, RuntimeError, AttributeError):
+                    print("DEBUG: Cannot schedule recovery, stopping TikTok playback")
+                    self._stopped = True
 
     def stop(self):
         if self._stopped:
             return
 
+        print("DEBUG: Stopping TikTok playback")
         self._stopped = True
         self.running = False
         self.current_distraction_index += 1
         self._save_index(self.current_distraction_index)
+        
         if self.player2 is not None:
             try:
-                self.player2.stop()
-            except Exception:
-                return
+                # Detach event handlers first to prevent callbacks during shutdown
+                if hasattr(self, 'event_manager2') and self.event_manager2:
+                    try:
+                        self.event_manager2.event_detach(vlc.EventType.MediaPlayerEndReached)
+                    except Exception:
+                        pass
+                
+                # Stop player with timeout protection
+                current_state = self.player2.get_state()
+                if current_state not in (vlc.State.NothingSpecial, vlc.State.Stopped):
+                    self.player2.stop()
+                    
+                # Give VLC time to stop cleanly
+                time.sleep(0.1)
+                
+            except Exception as e:
+                print(f"DEBUG: Error during TikTok cleanup: {e}")
+            finally:
+                # Don't clear shared instance, only the player
+                self.player2 = None
+                self.event_manager2 = None
 
     def play(self):
         return

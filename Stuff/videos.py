@@ -70,6 +70,11 @@ _vlc_instance = vlc.Instance(
     '--skip-frames',
     '--verbose=2',  # Add verbose logging
     '--intf=dummy',  # Disable interface
+    '--vout=directx',  # Use DirectX video output
+    '--avcodec-skiploopfilter=all',  # Skip loop filter for performance
+    '--network-caching=300',  # Reduce network caching
+    '--file-caching=300',  # Reduce file caching
+    # Remove --no-audio since TikTok needs to control audio per player
 )
 
 class Videos(ExperimentFrame):
@@ -321,20 +326,40 @@ class Videos2(ExperimentFrame):
             return
 
         # On some machines VLC fails if HWND is bound before the canvas is mapped.
-        if not self.canvas1.winfo_ismapped():
-            print(f"DEBUG: Canvas not mapped yet, retrying in 100ms")
-            self.after(100, self._prepare_video_preview)
+        try:
+            if not self.canvas1.winfo_ismapped() or not self.canvas1.winfo_viewable():
+                print(f"DEBUG: Canvas not mapped yet, retrying in 100ms")
+                self.after(100, self._prepare_video_preview)
+                return
+        except TclError as e:
+            print(f"DEBUG: Canvas access error: {e}, retrying in 200ms")
+            self.after(200, self._prepare_video_preview)
             return
 
         print(f"DEBUG: Preparing video preview for {self.video_path}")
-        self.update_idletasks()
-        self.canvas1.update_idletasks()
-        self.player.set_hwnd(int(self.canvas1.winfo_id()))
-        # Start decoding immediately so VLC can paint the first frame.
-        self.player.play()
-        print(f"DEBUG: Started video playback, state: {self.player.get_state()}")
-        if self.preview_pause_job is None:
-            self.preview_pause_job = self.after(150, self._pause_preview_playback)
+        try:
+            self.update_idletasks()
+            self.canvas1.update_idletasks()
+            
+            # Double-check canvas is still ready after updates
+            if not self.canvas1.winfo_ismapped():
+                print(f"DEBUG: Canvas unmapped after update, retrying")
+                self.after(100, self._prepare_video_preview)
+                return
+                
+            canvas_id = int(self.canvas1.winfo_id())
+            self.player.set_hwnd(canvas_id)
+            
+            # Start decoding immediately so VLC can paint the first frame.
+            play_result = self.player.play()
+            state = self.player.get_state()
+            print(f"DEBUG: Started video playback, state: {state}, play result: {play_result}")
+            
+            if self.preview_pause_job is None:
+                self.preview_pause_job = self.after(150, self._pause_preview_playback)
+        except (TclError, OSError, AttributeError) as e:
+            print(f"DEBUG: Error preparing video preview: {e}, retrying in 200ms")
+            self.after(200, self._prepare_video_preview)
 
     def _pause_preview_playback(self):
         self.preview_pause_job = None
@@ -360,9 +385,14 @@ class Videos2(ExperimentFrame):
         if self.playback_cleanup_done:
             return
 
-        state = self.player.get_state()
-        length_ms = self.player.get_length()
-        time_ms = self.player.get_time()
+        try:
+            state = self.player.get_state()
+            length_ms = self.player.get_length()
+            time_ms = self.player.get_time()
+        except Exception as e:
+            print(f"DEBUG: Error getting player state: {e}")
+            self._schedule_end_watchdog()
+            return
         
         print(f"DEBUG: Watchdog tick - State: {state}, Time: {time_ms}/{length_ms}ms, Started: {self.playback_started}")
         
@@ -384,9 +414,19 @@ class Videos2(ExperimentFrame):
             self._handle_video_end()
             return
 
-        # Check for potential freeze
+        # Enhanced freeze detection and recovery
         if self.playback_started and state != vlc.State.Playing:
             print(f"WARNING: Video may be frozen - State: {state}, Time: {time_ms}/{length_ms}ms")
+            
+            # Try to recover from pause/freeze
+            if state == vlc.State.Paused:
+                try:
+                    print("DEBUG: Attempting to resume from pause")
+                    self.player.play()
+                    # Give it a moment to transition
+                    self.after(500, lambda: print(f"DEBUG: Recovery attempt result - State: {self.player.get_state()}"))
+                except Exception as e:
+                    print(f"DEBUG: Recovery attempt failed: {e}")
 
         self._schedule_end_watchdog()
 
