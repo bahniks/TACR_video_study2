@@ -177,6 +177,10 @@ class Videos2(ExperimentFrame):
         self.playback_cleanup_done = False
         self.end_watchdog_job = None
         self.playback_started = False
+        self.startup_watchdog_job = None
+        self.startup_attempts = 0
+        self.max_startup_attempts = 3
+        self.tiktok_started = False
         self.focusToggle = []
         self.focusTime = 0
 
@@ -258,6 +262,24 @@ class Videos2(ExperimentFrame):
         self.bind_all("<Control-Shift-Alt-KeyPress-G>", self._manual_enable_next)
         self.bind_all("<Control-Shift-Alt-KeyPress-g>", self._manual_enable_next)
 
+    def _log_video_event(self, event_name, detail=""):
+        """Persist lightweight playback diagnostics for post-run analysis."""
+        try:
+            trial = self.root.status.get("videoNumber", "")
+            self.file.write(
+                "VideoEvent\t{}\t{}\t{}\t{:.3f}\t{}\t{}\n".format(
+                    self.id,
+                    trial,
+                    self.content_type,
+                    perf_counter(),
+                    event_name,
+                    detail,
+                )
+            )
+        except Exception:
+            # Never let diagnostics interfere with task flow.
+            pass
+
     def on_video_end(self, event):
         """Callback for when main video ends."""
         self.after(0, self._handle_video_end)
@@ -275,6 +297,9 @@ class Videos2(ExperimentFrame):
         if self.playback_cleanup_done:
             return
 
+        if self.startup_watchdog_job is not None:
+            self.after_cancel(self.startup_watchdog_job)
+            self.startup_watchdog_job = None
         if self.end_watchdog_job is not None:
             self.after_cancel(self.end_watchdog_job)
             self.end_watchdog_job = None
@@ -298,16 +323,12 @@ class Videos2(ExperimentFrame):
         
         print(f"DEBUG: Stopping main player and right content ({self.content_type})")
         
-        # Stop main player first and wait for DirectX cleanup
+        # Stop main player only when needed to avoid rare end-of-playback hangs.
         try:
             main_state = self.player.get_state()
             print(f"DEBUG: Stopping main player from state: {main_state}")
-            self.player.stop()
-            if self.content_type == "tiktok":
-                print("DEBUG: Waiting for main video DirectX cleanup before stopping TikTok...")
-                sleep(0.4)  # Extra time for DirectX resource cleanup when TikTok is involved
-            else:
-                sleep(0.1)
+            if main_state not in (vlc.State.Ended, vlc.State.Stopped, vlc.State.Error, vlc.State.NothingSpecial):
+                self.player.stop()
         except Exception as e:
             print(f"DEBUG: Error stopping main player: {e}")
         
@@ -315,10 +336,6 @@ class Videos2(ExperimentFrame):
         try:
             print(f"DEBUG: Stopping right content: {self.content_type}")
             self.right_content.stop()
-            if self.content_type == "tiktok":
-                print("DEBUG: Waiting for TikTok VLC cleanup...")
-                # Give TikTok VLC instance time to fully shut down
-                sleep(0.5)  # Increased wait for TikTok DirectX cleanup
         except Exception as e:
             print(f"DEBUG: Error stopping right content: {e}")
         
@@ -360,7 +377,11 @@ class Videos2(ExperimentFrame):
         if self.playback_cleanup_done:
             return
             
+        self.startup_attempts += 1
         print(f"DEBUG: Starting video playback for {self.video_path}")
+        print(f"DEBUG: Startup attempt {self.startup_attempts}/{self.max_startup_attempts}")
+        if self.startup_attempts > 1:
+            self._log_video_event("startup_retry", f"attempt={self.startup_attempts}")
         
         try:
             # Ensure canvas is ready
@@ -383,32 +404,79 @@ class Videos2(ExperimentFrame):
             # Start playback
             result = self.player.play()
             print(f"DEBUG: Video play() result: {result}")
-            self.playback_started = True
+            if result == -1:
+                raise RuntimeError("vlc play() returned -1")
             
+            # Mark started only after VLC reaches Playing state.
+            self._schedule_startup_watchdog()
+
             # Start watchdog
             self._schedule_end_watchdog()
             
-            # Start TikTok after main video has successfully started to avoid hardware conflicts
-            if self.content_type == "tiktok":
-                print("DEBUG: Main video started, now starting TikTok after delay...")
-                self.after(1500, self._start_delayed_tiktok)  # 1.5s delay to let main video stabilize
-            
         except Exception as e:
             print(f"ERROR: Video startup failed: {e}")
-            self._handle_video_end()
+            self._log_video_event("startup_exception", str(e))
+            if self.startup_attempts < self.max_startup_attempts:
+                self.after(400, self._start_video_playback)
+            else:
+                self._log_video_event("startup_fallback_force_end", "max_attempts_reached")
+                self._handle_video_end()
+
+    def _schedule_startup_watchdog(self):
+        if self.startup_watchdog_job is not None:
+            self.after_cancel(self.startup_watchdog_job)
+        self.startup_watchdog_job = self.after(300, self._startup_watchdog_tick)
+
+    def _startup_watchdog_tick(self):
+        self.startup_watchdog_job = None
+        if self.playback_cleanup_done or self.playback_started:
+            return
+
+        try:
+            state = self.player.get_state()
+            print(f"DEBUG: Startup watchdog state: {state}")
+        except Exception as e:
+            print(f"DEBUG: Startup watchdog failed to read state: {e}")
+            if self.startup_attempts < self.max_startup_attempts:
+                self.after(400, self._start_video_playback)
+            else:
+                self._handle_video_end()
+            return
+
+        if state == vlc.State.Playing:
+            self.playback_started = True
+            if self.content_type == "tiktok" and not self.tiktok_started:
+                print("DEBUG: Main video reached Playing state, now starting TikTok after delay...")
+                self.after(1200, self._start_delayed_tiktok)
+            return
+
+        if state in (vlc.State.Error, vlc.State.Ended):
+            self._log_video_event("startup_terminal_state", f"state={state}")
+            if self.startup_attempts < self.max_startup_attempts:
+                self.after(400, self._start_video_playback)
+            else:
+                self._log_video_event("startup_fallback_force_end", f"state={state}")
+                self._handle_video_end()
+            return
+
+        self._schedule_startup_watchdog()
 
     def _start_delayed_tiktok(self):
         """Start TikTok playback after main video has stabilized"""
         try:
+            if self.playback_cleanup_done:
+                return
             if self.content_type == "tiktok" and hasattr(self, 'right_content'):
                 main_state = self.player.get_state()
                 print(f"DEBUG: Starting delayed TikTok, main video state: {main_state}")
                 if main_state == vlc.State.Playing:
                     self.right_content.play()
+                    self.tiktok_started = True
                     print("DEBUG: TikTok started successfully after main video")
                 else:
                     print(f"WARNING: Main video not playing ({main_state}), starting TikTok anyway")
                     self.right_content.play()
+                    self.tiktok_started = True
         except Exception as e:
             print(f"ERROR: Failed to start delayed TikTok: {e}")
 
@@ -477,6 +545,7 @@ class Videos2(ExperimentFrame):
     def _handle_video_freeze_recovery(self):
         """Handle video freeze by either restarting playback or forcing continue"""
         print("DEBUG: Attempting video freeze recovery...")
+        self._log_video_event("freeze_recovery_start")
         
         try:
             # Try to restart playback first
@@ -484,6 +553,7 @@ class Videos2(ExperimentFrame):
             if current_time > 0:
                 # Video was playing before, try to resume from current position
                 print(f"DEBUG: Attempting to resume video from {current_time}ms")
+                self._log_video_event("freeze_recovery_resume", f"time_ms={current_time}")
                 self.player.set_time(current_time)
                 self.player.play()
                 
@@ -493,6 +563,7 @@ class Videos2(ExperimentFrame):
             else:
                 # Video never started, try restarting from beginning
                 print("DEBUG: Attempting to restart video from beginning")
+                self._log_video_event("freeze_recovery_restart")
                 self.player.stop()
                 self.player.play()
                 
@@ -502,9 +573,11 @@ class Videos2(ExperimentFrame):
                 
         except Exception as e:
             print(f"ERROR: Recovery attempt failed: {e}")
+            self._log_video_event("freeze_recovery_exception", str(e))
         
         # If all else fails, force continue
         print("DEBUG: Recovery failed, forcing video end")
+        self._log_video_event("freeze_recovery_force_end")
         self._handle_video_end()
 
     def _check_recovery_success(self):
@@ -518,6 +591,7 @@ class Videos2(ExperimentFrame):
             
             if state == vlc.State.Playing:
                 print("DEBUG: Recovery successful, video is now playing")
+                self._log_video_event("freeze_recovery_success")
                 # Reset freeze detection
                 if hasattr(self, '_freeze_detect_count'):
                     delattr(self, '_freeze_detect_count')
@@ -526,9 +600,11 @@ class Videos2(ExperimentFrame):
                 
         except Exception as e:
             print(f"ERROR: Recovery check failed: {e}")
+            self._log_video_event("freeze_recovery_check_exception", str(e))
         
         # Recovery failed, force continue
         print("DEBUG: Recovery failed, forcing video end")
+        self._log_video_event("freeze_recovery_force_end")
         self._handle_video_end()
 
     def _manual_enable_next(self, event=None):

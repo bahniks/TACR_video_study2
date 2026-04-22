@@ -76,8 +76,7 @@ if __name__ == "__main__":
     try:
         print("Starting experiment...")
         gui = GUI(frames, load = os.path.exists("temp.json"))
-        print("GUI created successfully")
-        gui.mainloop()
+        print("GUI session finished")
         print("Experiment completed")
     except Exception as e:
         print(f"Error during experiment execution: {e}")

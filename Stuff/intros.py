@@ -100,6 +100,13 @@ class Ending(InstructionsFrame):
                 break              
             sleep(5)
 
+    def gothrough(self):
+        self.update()
+        # Wait slightly above InstructionsFrame default wait=2 before triggering proceed.
+        sleep(2.1)
+        if self.winfo_exists() and self.root.winfo_exists():
+            # KeyPress is sufficient because the frame binds progression on key press.
+            self.root.event_generate("<KeyPress-G>")
 
 
 
