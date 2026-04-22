@@ -356,7 +356,20 @@ class VideoDebugger:
         
     def on_tiktok_video_end(self, event):
         """TikTok video end callback - this is where threading issues occur!"""
-        self.log_error("TikTok video ended via callback (THREADING CONTEXT!)")
+        current_time = time.time() - self.test_start_time
+        
+        # Track callback frequency to detect loops
+        if not hasattr(self, 'callback_times'):
+            self.callback_times = []
+        self.callback_times.append(current_time)
+        
+        # Check for rapid callback loop (more than 3 callbacks in 2 seconds)
+        recent_callbacks = [t for t in self.callback_times if current_time - t < 2.0]
+        if len(recent_callbacks) > 3:
+            self.log_error(f"ERROR: TikTok callback loop detected! {len(recent_callbacks)} callbacks in 2s")
+            self.error_count += 1
+        
+        self.log_error(f"TikTok video ended via callback at {current_time:.1f}s (THREADING CONTEXT!)")
         
         # This is the exact code that causes threading issues in the real TikTok class
         try:
@@ -501,6 +514,15 @@ class VideoDebugger:
         tiktok_issues = sum(1 for _, state, _ in self.tiktok_state_history 
                            if state in (vlc.State.Paused, vlc.State.Error))
         
+        # Check for callback loop issues
+        callback_loops = 0
+        if hasattr(self, 'callback_times'):
+            for i, t in enumerate(self.callback_times):
+                recent = [ct for ct in self.callback_times[i:] if ct - t < 2.0]
+                if len(recent) > 3:
+                    callback_loops += 1
+                    break
+        
         self.log_error(f"Test configuration:")
         self.log_error(f"  - Single VLC instance: {self.use_single_instance}")
         self.log_error(f"  - BoostVideo simulation: {self.simulate_boost_video}")
@@ -509,6 +531,7 @@ class VideoDebugger:
         self.log_error(f"Results:")
         self.log_error(f"  - Main video issues: {main_issues}")
         self.log_error(f"  - TikTok video issues: {tiktok_issues}")
+        self.log_error(f"  - TikTok callback loops: {callback_loops}")
         self.log_error(f"  - Total errors logged: {self.error_count}")
         
         # Specific experimental condition analysis
@@ -516,8 +539,11 @@ class VideoDebugger:
             boost_pause_issues = sum(1 for t, state, _ in self.main_state_history 
                                    if t > 1.5 and state == vlc.State.Paused)
             self.log_error(f"  - BoostVideo pause issues: {boost_pause_issues}")
+        
+        if hasattr(self, 'callback_times') and self.callback_times:
+            self.log_error(f"  - TikTok callbacks fired: {len(self.callback_times)}")
             
-        if main_issues == 0 and tiktok_issues == 0:
+        if main_issues == 0 and tiktok_issues == 0 and callback_loops == 0:
             self.log_error("✓ No playback issues detected!")
             self.log_error("  This suggests the threading fixes are working")
         else:
@@ -532,6 +558,9 @@ class VideoDebugger:
         if tiktok_issues > 0:
             self.log_error("  - TikTok issues suggest threading/callback problems")
             self.log_error("  - Check if shared VLC instance helps (toggle setting)")
+        if callback_loops > 0:
+            self.log_error("  - TikTok callback loops detected - check for short/corrupted videos")
+            self.log_error("  - This explains the threading issues in the real experiment")
             
     def log_error(self, message):
         """Log error/debug message"""

@@ -176,8 +176,6 @@ class Videos2(ExperimentFrame):
         self.right_overlay_window = None
         self.playback_cleanup_done = False
         self.end_watchdog_job = None
-        self.delayed_play_job = None
-        self.preview_pause_job = None
         self.playback_started = False
         self.focusToggle = []
         self.focusTime = 0
@@ -201,23 +199,11 @@ class Videos2(ExperimentFrame):
         # Initialize VLC player for left video with audio output
         self.player = _vlc_instance.media_player_new()
 
-        # Load the video file
-        media = _vlc_instance.media_new(self.video_path)
-        self.player.set_media(media)
-
         # Track video end
         self.video_ended = False
 
-        # Bind the VLC event manager to detect when video ends
-        self.event_manager = self.player.event_manager()
-        self.event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.on_video_end)
-        self.event_manager.event_attach(vlc.EventType.MediaPlayerEncounteredError, self.on_video_error)
-
-        # Prepare the video surface immediately so the first frame can appear,
-        # then resume normal playback after the 1-second pause.
-        self.after(0, self._prepare_video_preview)
-        self.delayed_play_job = self.after(1000, self._resume_video_playback)
-        self._schedule_end_watchdog()
+        # Start video playback after 1-second delay (no preview/thumbnail)
+        self.after(1000, self._start_video_playback)
 
         videos2_index = self.root.status.get("videos2_index", 0)
         self.content_type = self.root.status["distractions"][videos2_index]
@@ -282,12 +268,6 @@ class Videos2(ExperimentFrame):
         if self.playback_cleanup_done:
             return
 
-        if self.delayed_play_job is not None:
-            self.after_cancel(self.delayed_play_job)
-            self.delayed_play_job = None
-        if self.preview_pause_job is not None:
-            self.after_cancel(self.preview_pause_job)
-            self.preview_pause_job = None
         if self.end_watchdog_job is not None:
             self.after_cancel(self.end_watchdog_job)
             self.end_watchdog_job = None
@@ -321,59 +301,42 @@ class Videos2(ExperimentFrame):
             self.canvas2.update()
         self.playback_cleanup_done = True
 
-    def _prepare_video_preview(self):
+    def _start_video_playback(self):
+        """Simple video startup after 1s delay - no preview/pause complexity"""
         if self.playback_cleanup_done:
             return
-
-        # On some machines VLC fails if HWND is bound before the canvas is mapped.
+            
+        print(f"DEBUG: Starting video playback for {self.video_path}")
+        
         try:
-            if not self.canvas1.winfo_ismapped() or not self.canvas1.winfo_viewable():
-                print(f"DEBUG: Canvas not mapped yet, retrying in 100ms")
-                self.after(100, self._prepare_video_preview)
-                return
-        except TclError as e:
-            print(f"DEBUG: Canvas access error: {e}, retrying in 200ms")
-            self.after(200, self._prepare_video_preview)
-            return
-
-        print(f"DEBUG: Preparing video preview for {self.video_path}")
-        try:
+            # Ensure canvas is ready
             self.update_idletasks()
             self.canvas1.update_idletasks()
             
-            # Double-check canvas is still ready after updates
-            if not self.canvas1.winfo_ismapped():
-                print(f"DEBUG: Canvas unmapped after update, retrying")
-                self.after(100, self._prepare_video_preview)
-                return
-                
+            # Set canvas HWND
             canvas_id = int(self.canvas1.winfo_id())
             self.player.set_hwnd(canvas_id)
             
-            # Start decoding immediately so VLC can paint the first frame.
-            play_result = self.player.play()
-            state = self.player.get_state()
-            print(f"DEBUG: Started video playback, state: {state}, play result: {play_result}")
+            # Load the video file
+            media = _vlc_instance.media_new(self.video_path)
+            self.player.set_media(media)
             
-            if self.preview_pause_job is None:
-                self.preview_pause_job = self.after(150, self._pause_preview_playback)
-        except (TclError, OSError, AttributeError) as e:
-            print(f"DEBUG: Error preparing video preview: {e}, retrying in 200ms")
-            self.after(200, self._prepare_video_preview)
-
-    def _pause_preview_playback(self):
-        self.preview_pause_job = None
-        if self.playback_cleanup_done:
-            return
-        if self.player.get_state() in (vlc.State.Playing, vlc.State.Opening, vlc.State.Buffering):
-            self.player.pause()
-
-    def _resume_video_playback(self):
-        self.delayed_play_job = None
-        if self.playback_cleanup_done:
-            return
-        self.player.play()
-        self.playback_started = True
+            # Bind event manager
+            self.event_manager = self.player.event_manager()
+            self.event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.on_video_end)
+            self.event_manager.event_attach(vlc.EventType.MediaPlayerEncounteredError, self.on_video_error)
+            
+            # Start playback
+            result = self.player.play()
+            print(f"DEBUG: Video play() result: {result}")
+            self.playback_started = True
+            
+            # Start watchdog
+            self._schedule_end_watchdog()
+            
+        except Exception as e:
+            print(f"ERROR: Video startup failed: {e}")
+            self._handle_video_end()
 
     def _schedule_end_watchdog(self):
         if self.end_watchdog_job is not None:
@@ -394,16 +357,8 @@ class Videos2(ExperimentFrame):
             self._schedule_end_watchdog()
             return
         
-        print(f"DEBUG: Watchdog tick - State: {state}, Time: {time_ms}/{length_ms}ms, Started: {self.playback_started}")
+        print(f"DEBUG: Watchdog tick - State: {state}, Time: {time_ms}/{length_ms}ms")
         
-        if state == vlc.State.Playing:
-            self.playback_started = True
-
-        if not self.playback_started:
-            print("DEBUG: Video playback not started yet, continuing watchdog")
-            self._schedule_end_watchdog()
-            return
-
         if state in (vlc.State.Ended, vlc.State.Error):
             print(f"DEBUG: Video ended or error state: {state}")
             self._handle_video_end()
@@ -414,19 +369,9 @@ class Videos2(ExperimentFrame):
             self._handle_video_end()
             return
 
-        # Enhanced freeze detection and recovery
+        # Simple freeze detection
         if self.playback_started and state != vlc.State.Playing:
-            print(f"WARNING: Video may be frozen - State: {state}, Time: {time_ms}/{length_ms}ms")
-            
-            # Try to recover from pause/freeze
-            if state == vlc.State.Paused:
-                try:
-                    print("DEBUG: Attempting to resume from pause")
-                    self.player.play()
-                    # Give it a moment to transition
-                    self.after(500, lambda: print(f"DEBUG: Recovery attempt result - State: {self.player.get_state()}"))
-                except Exception as e:
-                    print(f"DEBUG: Recovery attempt failed: {e}")
+            print(f"WARNING: Video not playing - State: {state}, Time: {time_ms}/{length_ms}ms")
 
         self._schedule_end_watchdog()
 
@@ -442,11 +387,11 @@ class Videos2(ExperimentFrame):
         self.nextFun()
 
     def gothrough(self):
-        deadline = perf_counter() + 4.0
+        # Simple gothrough - just wait for playback to start since no preview complexity
+        deadline = perf_counter() + 5.0  # Slightly longer to account for 1s startup delay
         while perf_counter() < deadline:
             self.update()
-            if self.playback_started or self.player.get_state() == vlc.State.Playing:
-                self.playback_started = True
+            if self.playback_started:
                 break
             sleep(0.05)
 

@@ -26,6 +26,9 @@ class TikTok:
         self.player2 = None
         self.running = True
         self._stopped = False
+        self._last_callback_time = 0  # Initialize callback cooldown timer
+        self._video_play_count = 0  # Track rapid video switching
+        self._video_play_start_time = 0  # Track callback loop timing
 
         # Use shared VLC instance from videos.py instead of creating new one
         from videos import _vlc_instance
@@ -54,10 +57,21 @@ class TikTok:
         # Thread-safe check using simple boolean flags
         if self._stopped or not self.running:
             return
+        
+        # Add cooldown to prevent rapid callback loops
+        current_time = time.time()
+        if hasattr(self, '_last_callback_time'):
+            if current_time - self._last_callback_time < 1.0:  # Minimum 1s between callbacks
+                print(f"DEBUG: TikTok callback too soon, ignoring ({current_time - self._last_callback_time:.2f}s)")
+                return
+        
+        self._last_callback_time = current_time
+        print(f"DEBUG: TikTok video ended, scheduling next video")
+        
         try:
             # Schedule the next video in the main thread
             if hasattr(self.canvas, 'after'):
-                self.canvas.after(0, self.play_next_distraction_video)
+                self.canvas.after(500, self.play_next_distraction_video)  # 500ms delay for stability
         except (TclError, RuntimeError, AttributeError):
             return
 
@@ -75,6 +89,24 @@ class TikTok:
             print("DEBUG: Canvas unavailable, stopping TikTok playback")
             return
 
+        # Check if we're in a callback loop (too many videos played recently)
+        if hasattr(self, '_video_play_count'):
+            current_time = time.time()
+            if not hasattr(self, '_video_play_start_time'):
+                self._video_play_start_time = current_time
+            elif current_time - self._video_play_start_time < 10 and self._video_play_count > 5:
+                print(f"DEBUG: TikTok callback loop detected ({self._video_play_count} videos in {current_time - self._video_play_start_time:.1f}s), slowing down")
+                # Reset counters and add longer delay
+                self._video_play_count = 0
+                self._video_play_start_time = current_time
+                self.canvas.after(3000, self.play_next_distraction_video)  # 3s delay to break loop
+                return
+        else:
+            self._video_play_count = 0
+            self._video_play_start_time = time.time()
+
+        self._video_play_count += 1
+
         try:
             # Stop previous video with timeout protection
             current_state = self.player2.get_state()
@@ -87,7 +119,7 @@ class TikTok:
             return
 
         video_path = self.distraction_videos[self.current_distraction_index % len(self.distraction_videos)]
-        print(f"DEBUG: Playing TikTok video: {video_path} (index: {self.current_distraction_index})")
+        print(f"DEBUG: Playing TikTok video: {video_path} (index: {self.current_distraction_index}, count: {self._video_play_count})")
         
         try:
             media2 = self.instance2.media_new(video_path)
@@ -106,6 +138,23 @@ class TikTok:
             # Check if playback started successfully
             state = self.player2.get_state()
             print(f"DEBUG: TikTok video state after play(): {state}, play result: {play_result}")
+            
+            # Validate video length to detect very short/corrupted videos
+            def check_video_validity():
+                try:
+                    length = self.player2.get_length()
+                    if length > 0 and length < 2000:  # Less than 2 seconds
+                        print(f"WARNING: Very short TikTok video ({length}ms), may cause callback loops")
+                        # Skip to next video immediately
+                        self.current_distraction_index += 2  # Skip this problematic video
+                        self._save_index(self.current_distraction_index)
+                        self.canvas.after(2000, self.play_next_distraction_video)
+                        return
+                except Exception:
+                    pass
+                    
+            # Check video validity after a short delay
+            self.canvas.after(1000, check_video_validity)
             
             self.current_distraction_index += 1
             self._save_index(self.current_distraction_index)
