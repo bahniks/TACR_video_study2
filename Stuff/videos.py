@@ -225,6 +225,8 @@ class Videos2(ExperimentFrame):
             self.right_content = content_map[self.content_type](self.canvas2, width=480, height=854, owner=self)
         elif self.content_type == "tiktok":
             self.right_content = content_map[self.content_type](self.canvas2, width=480, height=854, owner=self)
+        elif self.content_type == "chat":
+            self.right_content = content_map[self.content_type](self.canvas2, width=480, height=854, root = self.root)
         else:
             self.right_content = content_map[self.content_type](self.canvas2, width=480, height=854)
         self.right_content.play()

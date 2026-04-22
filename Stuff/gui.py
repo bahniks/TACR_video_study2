@@ -79,6 +79,21 @@ class GUI(Tk):
                     if response == "continue":
                         for key, value in data.items():
                             setattr(self, key, value)  
+                        # Import intervention frames lazily to avoid circular imports during module load.
+                        from intervention import (
+                            NudgeInstructions,
+                            BoostInstructions,
+                            BoostVideo,
+                            BoostUnderstandingCheck,
+                            IfThenPlanChooser,
+                        )
+                        if self.status["condition"] == "nudge":
+                            self.order.insert(6, NudgeInstructions)
+                        elif self.status["condition"] == "boost":
+                            self.order.insert(6, BoostInstructions)
+                            self.order.insert(7, BoostVideo)
+                            self.order.insert(8, BoostUnderstandingCheck)
+                            self.order.insert(9, IfThenPlanChooser)
                     else:
                         load = False  
                 else:

@@ -18,8 +18,7 @@ from questionnaire import UPPS, SCI, SAMS, Mindset, QuestInstructions
 from intervention import Intervention
 
 
-    
-# TODO ukladani dat vsude
+
 frames = [Initial,
           Login, 
           Intro,             

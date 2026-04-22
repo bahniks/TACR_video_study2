@@ -9,7 +9,6 @@ import random
 
 from Stuff.constants import TESTING
 from common import ExperimentFrame, InstructionsAndUnderstanding, InstructionsFrame
-from gui import GUI
 from login import Login
 from videos import Videos
 
@@ -273,5 +272,6 @@ BoostUnderstandingCheck = (InstructionsAndUnderstanding,
 
 
 if __name__ == "__main__":
+    from gui import GUI
     os.chdir(os.path.dirname(os.getcwd()))
     GUI([Login, Intervention])
