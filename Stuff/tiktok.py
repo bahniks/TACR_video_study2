@@ -4,6 +4,7 @@ from tkinter import *
 
 import os
 import random
+import threading
 import vlc
 import time
 
@@ -129,8 +130,6 @@ class TikTok:
             current_state = self.player2.get_state()
             if current_state not in (vlc.State.NothingSpecial, vlc.State.Stopped):
                 self.player2.stop()
-                # Give VLC time to stop cleanly
-                time.sleep(0.1)
         except Exception as e:
             print(f"DEBUG: Error stopping TikTok player: {e}")
             return
@@ -199,40 +198,51 @@ class TikTok:
         self._save_index(self.current_distraction_index)
         
         if self.player2 is not None:
+            # Detach event handlers immediately on the main thread to prevent
+            # any further callbacks from firing during shutdown.
             try:
-                # Detach event handlers first to prevent callbacks during shutdown
                 if hasattr(self, 'event_manager2') and self.event_manager2:
-                    try:
-                        self.event_manager2.event_detach(vlc.EventType.MediaPlayerEndReached)
-                    except Exception:
-                        pass
-                
-                # Stop player with timeout protection
-                current_state = self.player2.get_state()
-                if current_state not in (vlc.State.NothingSpecial, vlc.State.Stopped):
-                    print(f"DEBUG: Stopping TikTok player from state: {current_state}")
-                    self.player2.stop()
-                    
-                # Give VLC time to stop cleanly and release resources
-                time.sleep(0.2)  # Increased wait time for thorough cleanup
-                
-            except Exception as e:
-                print(f"DEBUG: Error during TikTok cleanup: {e}")
-            finally:
-                # Clean up separate VLC instance thoroughly
-                self.player2 = None
-                self.event_manager2 = None
-                if hasattr(self, 'instance2') and self.instance2:
-                    try:
-                        print("DEBUG: Releasing TikTok VLC instance...")
-                        # Force cleanup of any pending operations
-                        time.sleep(0.1)
-                        self.instance2.release()
-                        print("DEBUG: TikTok VLC instance released")
-                    except Exception as e:
-                        print(f"DEBUG: Error releasing TikTok VLC instance: {e}")
-                    finally:
-                        self.instance2 = None
+                    self.event_manager2.event_detach(vlc.EventType.MediaPlayerEndReached)
+            except Exception:
+                pass
+
+            # Capture references and clear instance attributes so no other code
+            # can reach the player / instance while they are being torn down.
+            player2 = self.player2
+            instance2 = getattr(self, 'instance2', None)
+            self.player2 = None
+            self.event_manager2 = None
+            self.instance2 = None
+
+            # All blocking VLC calls (stop + release) run in a daemon thread so
+            # they never stall the Tkinter event loop.
+            threading.Thread(
+                target=self._vlc_cleanup_thread,
+                args=(player2, instance2),
+                daemon=True,
+            ).start()
+
+    @staticmethod
+    def _vlc_cleanup_thread(player2, instance2):
+        """Background worker: stop VLC player then release the instance."""
+        try:
+            state = player2.get_state()
+            if state not in (vlc.State.NothingSpecial, vlc.State.Stopped):
+                print(f"DEBUG: Stopping TikTok player from state: {state} (background thread)")
+                player2.stop()
+            # Brief pause to let VLC finish flushing internal buffers before
+            # releasing the instance; this is safe here because we are off the
+            # main thread.
+            time.sleep(0.25)
+        except Exception as e:
+            print(f"DEBUG: Error stopping TikTok player (background): {e}")
+        try:
+            if instance2 is not None:
+                print("DEBUG: Releasing TikTok VLC instance (background thread)...")
+                instance2.release()
+                print("DEBUG: TikTok VLC instance released")
+        except Exception as e:
+            print(f"DEBUG: Error releasing TikTok VLC instance (background): {e}")
 
     def get_distraction_videos(self):
         distractions_path = os.path.join(os.getcwd(), "Stuff", "Distractions")

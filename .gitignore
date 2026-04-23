@@ -1,4 +1,7 @@
 temp.json
+temp_heartbeat.json
+log.txt
+test.py
 Data/*.txt
 Data/extracted/*.tsv
 Stuff/Distractions/*.mp4

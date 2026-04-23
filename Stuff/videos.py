@@ -119,8 +119,8 @@ class Videos(ExperimentFrame):
             self.next["state"] = "disabled"
 
     def on_video_end(self, event):
-        """Callback for when the video ends."""
-        self.next["state"] = "normal"
+        """Callback for when the video ends (called from VLC's internal thread)."""
+        self.after(0, lambda: self.next.configure(state="normal"))
 
     def gothrough(self):
         deadline = perf_counter() + 3.0
@@ -506,11 +506,6 @@ class Videos2(ExperimentFrame):
             self._handle_video_end()
             return
 
-        if length_ms > 0 and time_ms >= max(0, length_ms - 250):
-            print(f"DEBUG: Video near end ({time_ms}/{length_ms}ms), triggering end")
-            self._handle_video_end()
-            return
-
         # Enhanced freeze detection with recovery
         if self.playback_started and state != vlc.State.Playing:
             print(f"WARNING: Video not playing - State: {state}, Time: {time_ms}/{length_ms}ms")
@@ -596,6 +591,10 @@ class Videos2(ExperimentFrame):
                 if hasattr(self, '_freeze_detect_count'):
                     delattr(self, '_freeze_detect_count')
                     delattr(self, '_freeze_detect_start_time')
+                # Restart the end watchdog — it was not rescheduled when the
+                # freeze-recovery path was taken, so without this the watchdog
+                # is dead and the video end would never be detected.
+                self._schedule_end_watchdog()
                 return
                 
         except Exception as e:
