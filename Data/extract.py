@@ -64,6 +64,8 @@ SECTION_FILENAME["Focus time"] = "focus_time_results.tsv"
 
 TIME_FILENAME = "time_results.tsv"
 FRAME_TIME_SUMMARY_FILENAME = "frame_time_summary.tsv"
+EXCEPTIONS_FILENAME = "exceptions_results.tsv"
+EXCEPTIONS_COLUMNS = ["source_file", "participant_id", "timestamp", "traceback"]
 
 UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
@@ -107,7 +109,7 @@ def normalize_row(section: str, row: str) -> list[str]:
     return pad_or_extend(fields, expected_width)
 
 
-def parse_file(path: Path, section_rows: dict[str, list[list[str]]], time_rows: list[list[str]]) -> None:
+def parse_file(path: Path, section_rows: dict[str, list[list[str]]], time_rows: list[list[str]], exception_rows: list[list[str]]) -> None:
     participant_id = parse_participant_id_from_filename(path)
     lines = path.read_text(encoding="utf-8").splitlines()
 
@@ -117,6 +119,14 @@ def parse_file(path: Path, section_rows: dict[str, list[list[str]]], time_rows: 
         line = lines[i].strip()
 
         if not line:
+            i += 1
+            continue
+
+        if line.startswith("gui_exception	"):
+            parts = line.split("\t", 2)
+            timestamp = parts[1] if len(parts) > 1 else ""
+            traceback = parts[2].replace(" | ", "\n").strip() if len(parts) > 2 else ""
+            exception_rows.append([path.name, participant_id, timestamp, traceback])
             i += 1
             continue
 
@@ -185,9 +195,10 @@ def build_frame_summary(time_rows: list[list[str]]) -> list[list[str]]:
 def main() -> None:
     section_rows: dict[str, list[list[str]]] = {name: [] for name in SECTION_COLUMNS}
     time_rows: list[list[str]] = []
+    exception_rows: list[list[str]] = []
 
     for data_file in sorted(DATA_DIR.glob("*.txt")):
-        parse_file(data_file, section_rows, time_rows)
+        parse_file(data_file, section_rows, time_rows, exception_rows)
 
     for section_name, rows in section_rows.items():
         if not rows:
@@ -206,6 +217,12 @@ def main() -> None:
         OUTPUT_DIR / FRAME_TIME_SUMMARY_FILENAME,
         ["frame", "n", "avg_seconds", "avg_minutes"],
         frame_summary_rows,
+    )
+
+    write_tsv(
+        OUTPUT_DIR / EXCEPTIONS_FILENAME,
+        EXCEPTIONS_COLUMNS,
+        exception_rows,
     )
 
     print(f"Extracted files written to: {OUTPUT_DIR}")
